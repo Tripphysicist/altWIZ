@@ -131,21 +131,43 @@ LATobsCat  = [];
 HSobsCat   = [];
 HSmdCat    = [];
 
-for bigLoopLon = 1:5;
-    for bigLoopLat = 1:4;
+loopSize = 5;
+
+lonLength = length(mdCol.lon);
+latLength = length(mdCol.lat);
+
+lonIndexLength = round(lonLength/loopSize);
+latIndexLength = round(latLength/loopSize);
+
+for bigLoopLon = 1:loopSize;
+    for bigLoopLat = 1:loopSize;
         
         % latInd = centerLatInd - 15 : centerLatInd + 15;
         % lonInd = centerLonInd - 15 : centerLonInd + 15;
         
         % mdTest.lat  = mdCol.lat(latInd);
         % mdTest.lon  = mdCol.lon(lonInd);
-        lonInd =1+38*(bigLoopLon-1):38*(bigLoopLon);
-        latInd =1+32*(bigLoopLat-1):32*(bigLoopLat);
+        if bigLoopLon < loopSize
+        lonInd =1+lonIndexLength*(bigLoopLon-1):lonIndexLength*(bigLoopLon);
+        elseif bigLoopLon == loopSize
+        lonInd =1+lonIndexLength*(bigLoopLon-1):length(mdCol.lon);
+        else 
+        disp('something wierd has happened')
+        end
         
-        mdTest.lon  = mdCol.lat(lonInd);
-        mdTest.lat  = mdCol.lon(latInd);
+        if bigLoopLat < loopSize
+        latInd =1+latIndexLength*(bigLoopLat-1):latIndexLength*(bigLoopLat);
+        elseif bigLoopLat == loopSize
+        latInd =1+latIndexLength*(bigLoopLat-1):length(mdCol.lat);
+        else 
+        disp('something wierd has happened')
+        end
+
         
-        % timeInd = 1:200;
+        mdTest.lon  = mdCol.lon(lonInd);    
+        mdTest.lat  = mdCol.lat(latInd);
+        
+%        timeInd = 1:10;
         timeInd = 1:length(mdCol.time);
         mdTest.time = mdCol.time(timeInd);
         
@@ -419,7 +441,10 @@ HSalt = HSalt(indNaN);
         
         %% save the matched pairs, clear data and loop through the whole domain
         
-        clearvars -except TIMEobs LONobs LATobs HSobs HSmd TIMEobsCat LONobsCat LATobsCat HSobsCat HSmdCat mdCol bigLoopLat bigLoopLon averagingMethod mdPath mdFileList
+        clearvars -except TIMEobs LONobs LATobs HSobs HSmd TIMEobsCat...
+            LONobsCat LATobsCat HSobsCat HSmdCat mdCol bigLoopLat...
+            bigLoopLon averagingMethod mdPath mdFileList loopSize...
+            lonLength latLength lonIndexLength latIndexLength
         
         TIMEobsCat = [TIMEobsCat; TIMEobs];
         LONobsCat  = [LONobsCat; LONobs];

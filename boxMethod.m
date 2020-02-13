@@ -2,13 +2,13 @@ function [LONobs LATobs TIMEobs HSobs] = boxMethod(obsLon, obsLat, obsTime, obsH
 % [LONobs LATobs TIMEobs HSobs] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat,maxTimeDiff,gridStatus,minNumberObs) 
 
 %for debugging
-obsLon = LONobsNA;
-obsLat = LATobsNA;
-obsTime = TIMEobsNA;
-obsHs = HSobsNA;
-gridLon = mdTest.lon;
-gridLat = mdTest.lat;
-gridStatus = mdTest.gridStatus;
+% obsLon = LONobsNA;
+% obsLat = LATobsNA;
+% obsTime = TIMEobsNA;
+% obsHs = HSobsNA;
+% gridLon = mdTest.lon;
+% gridLat = mdTest.lat;
+% gridStatus = mdTest.gridStatus;
 
 %define bin spacing
 lonBinSpacing  = .5; %degrees
