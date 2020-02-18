@@ -79,6 +79,14 @@ mdFileList  = dir(mdPath);
 mdFileList = rmfield (mdFileList,{'date','bytes','isdir','datenum'});
 mdFileList = mdFileList(3:end);
 
+TIMEobsCat = [];
+LONobsCat  = [];
+LATobsCat  = [];
+HSobsCat   = [];
+HSmdCat    = [];
+%WIND
+% UmdCat = [];
+% VmdCat = [];
 
 for fileNum=1:length(mdFileList)
     
@@ -130,14 +138,7 @@ mdTest.hs   = papaHs;
     
     % centerLatInd = 6; %ocean
     % centerLonInd =  6; %ocean
-    TIMEobsCat = [];
-    LONobsCat  = [];
-    LATobsCat  = [];
-    HSobsCat   = [];
-    HSmdCat    = [];
-    %WIND
-    % UmdCat = [];
-    % VmdCat = [];
+
     
     loopSize = 5;
     
@@ -457,20 +458,19 @@ HSalt = HSalt(indNaN);
             clearvars -except TIMEobs LONobs LATobs HSobs HSmd TIMEobsCat...
                 LONobsCat LATobsCat HSobsCat HSmdCat mdCol bigLoopLat...
                 bigLoopLon averagingMethod mdPath mdFileList loopSize...
-                lonLength latLength lonIndexLength latIndexLength
+                lonLength latLength lonIndexLength latIndexLength fileNum
             
             TIMEobsCat = [TIMEobsCat; TIMEobs];
             LONobsCat  = [LONobsCat; LONobs];
             LATobsCat  = [LATobsCat; LATobs];
             HSobsCat   = [HSobsCat; HSobs];
             HSmdCat    = [HSmdCat; HSmd];
+            
         end
     end
-    
-    
 end
 
-save('yearResults')
+save('yearResults2010')
 %% PART ?: calculate statistics
 
 %% PART ?: make simple plots
