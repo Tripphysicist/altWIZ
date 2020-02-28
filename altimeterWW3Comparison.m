@@ -46,30 +46,6 @@ averagingMethod = 'box';
 % It will be useful to know the proximity of the comparison point to the
 % coast where the general quality of altimeter data degrades
 
-%% PAPA test
-% this was a test designed to interpolate altimeter data to a buoy
-% position, the buoy chosen was ocean station papa. The interpolation works
-% but is not meaningful because the altimeter data is interpolated over
-% long distances. I think we need a way to reduce altimeter data, or to
-% inforce some gap length. To run the test again, simply uncomment the PAPA
-% test sections.
-
-% PAPA TEST
-%{
-papaFile = 'D:\Datasets\Papa\166p1_historic.nc';
-papaInfo = ncinfo(papaFile);
-papaTimeOffset = datenum([1970 01 01 00 00 00]);
-papaTime = double(ncread(papaFile,'waveTime'))/(60*60*24) + papaTimeOffset;
-papaHs = ncread(papaFile,'waveHs');
-papaGPStime = double(ncread(papaFile,'gpsTime'))/(60*60*24) + papaTimeOffset;
-papaGPSlat = ncread(papaFile,'gpsLatitude');
-papaGPSlon = ncread(papaFile,'gpsLongitude');
-papaLat = interp1(papaGPStime, papaGPSlat, papaTime);
-papaLon = interp1(papaGPStime, papaGPSlon, papaTime) + 360;
-papaLat(1)= papaLat(2); %interpolation made this a NaN
-papaLon(1)= papaLon(2); %interpolation made this a NaN
-%}
-
 %% PART ?: load WW3 data, version 1
 % phase 1: one .nc file ACTIVE
 % phase 2: loop through a directory
@@ -114,15 +90,7 @@ for fileNum=1:length(mdFileList)
     % vwnd = ncread([mdPath 'ww3.201010.nc'], 'vwnd');
     % mdCol.wind = sqrt(uwnd.^2 + vwnd.^2);
     
-    % PAPA TEST
-    %{
-%PAPA TEST
-mdTest.time = papaTime;
-mdTest.lon  = (min(papaLon) - 0.5 : max(papaLon) + 0.5);
-mdTest.lat  = min(papaLat)  - 0.5 : max(papaLat) + 0.5;
-mdTest.hs   = papaHs;
-    %}
-    
+   
     %% reduce the model domain so it can run on my desktop
     % the whole grid runs lon 110:0.5:300, lat -64:0.5:64; 190 x 128
     
@@ -397,18 +365,6 @@ mdTest.hs   = papaHs;
             end
             %}
             
-            %% PAPA test
-            %{
-% LONobs  = vertcat(obs(:).lon);
-% LATobs  = vertcat(obs(:).lat);
-% TIMEobs = vertcat(obs(:).time);
-% HSobs   = vertcat(obs(:).hsKcal);
-
-F = scatteredInterpolant(LONobs,LATobs,TIMEobs,HSobs,'linear','none');
-HSalt = F(papaLon,papaLat,papaTime);
-indNaN = ~isnan(HSalt);
-HSalt = HSalt(indNaN);
-            %}
             %% PART ?: collocation
             
             % phase 1: interpolation

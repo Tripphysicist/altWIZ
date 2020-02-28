@@ -1,4 +1,19 @@
 % altWW3CompPlotting
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% Script to make plots for comparing WW3 output to altimeter measurements %
+% of significant wave height and wind speed                               %
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% Author:       Clarence Olin Collins III, Ph.D.                          %
+% Affiliation:  ERDC - FRF                                                %
+% created:      02/21/2020                                                %
+% version:      1.0                                                       %
+% updates:                                                                %
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+
+
 %% PART ?: calculate statistics
 
 %% PART ?: make simple plots

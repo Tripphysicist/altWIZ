@@ -1,7 +1,7 @@
 function [LONobs LATobs TIMEobs HSobs] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat,maxTimeDiff,gridStatus,minNumberObs) 
 % [LONobs LATobs TIMEobs HSobs] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat,maxTimeDiff,gridStatus,minNumberObs) 
 
-%for debugging
+% %for debugging
 % obsLon = LONobsNA;
 % obsLat = LATobsNA;
 % obsTime = TIMEobsNA;
