@@ -39,8 +39,8 @@ averagingMethod = 'bubble';
 
 maxTimeDiffMinutes =30; %minutes
 maxTimeDiff = maxTimeDiffMinutes/(24*60); %days
-maxDistance = 250; %km radius
-minNumberObs = 1;
+maxDistance = 50; %km radius
+minNumberObs = 5;
 
 %% PART ?: load coastline data
 % It will be useful to know the proximity of the comparison point to the
@@ -84,12 +84,27 @@ papaLon(1)= papaLon(2); %interpolation made this a NaN
 % clear timeCat lonCat latCat hsCat
 
 % CDIP MINI BUOYS
-buoy = 'mwb452';
+
+buoy = 'AO_MWB';
 load([baseDir 'Analysis' glyph 'AltimerComparison' glyph 'mini-buoys' glyph buoy '.mat'])
-buoyTest.time = mwb.time;
-buoyTest.lon  = 360 + mwb.lon; %from negative W to E poisitive 0 - 360 
-buoyTest.lat  = mwb.lat;
-buoyTest.hs   = mwb.Hs;
+
+time = [];
+lon  = []; %from negative W to E poisitive 0 - 360 
+lat  = [];
+Hs   = [];
+
+fields = fieldnames(MWB);
+for i = 1:length(fields)
+    time = [time; MWB.(fields{i}).time];
+    lon = [lon; MWB.(fields{i}).lon];
+    lat = [lat; MWB.(fields{i}).lat];
+    Hs = [Hs; MWB.(fields{i}).Hs];
+end
+
+buoyTest.time = time;
+buoyTest.lon  = 360 + lon; %from negative W to E poisitive 0 - 360 
+buoyTest.lat  = lat;
+buoyTest.hs   = Hs;
 
 
 %% PART ?: load altimeter data, version 1
