@@ -20,9 +20,9 @@
 
 %% Part I: house cleaning
 tic
-% close all
+close all
 clear
-
+[glyph baseDir] = giveGlyph;
 %% Global Parameters
 % There are two main methods for reducing altimeter data, which generally
 % outputs data at 1 Hz. One way to do it is to use "find" and set a maximum
@@ -48,7 +48,6 @@ minNumberObs = 5;
 
 %% BUOY test
 
-% CDIP
 
 % PAPA TEST
 %{
@@ -72,15 +71,25 @@ papaLon(1)= papaLon(2); %interpolation made this a NaN
 % buoyTest.hs   = papaHs;
 
 % NDBC 
+% buoy = '46029';
+% buoy = '41048';
+% buoy = '46001';
+% buoy = '44011';
+% type = 'h';
+% load([baseDir 'Analysis' glyph 'Jensen Buoy Work' glyph 'test' glyph buoy glyph buoy type '.mat'])
+% buoyTest.time = timeCat;
+% buoyTest.lon  = lonCat;
+% buoyTest.lat  = latCat;
+% buoyTest.hs   = hsCat;
+% clear timeCat lonCat latCat hsCat
 
-buoy = '41048';
-type = 'h';
-load(['D:\Analysis\Jensen Buoy Work\test\' buoy '\' buoy type '.mat'])
-buoyTest.time = timeCat;
-buoyTest.lon  = lonCat;
-buoyTest.lat  = latCat;
-buoyTest.hs   = hsCat;
-clear timeCat lonCat latCat hsCat
+% CDIP MINI BUOYS
+buoy = 'mwb452';
+load([baseDir 'Analysis' glyph 'AltimerComparison' glyph 'mini-buoys' glyph buoy '.mat'])
+buoyTest.time = mwb.time;
+buoyTest.lon  = 360 + mwb.lon; %from negative W to E poisitive 0 - 360 
+buoyTest.lat  = mwb.lat;
+buoyTest.hs   = mwb.Hs;
 
 
 %% PART ?: load altimeter data, version 1
@@ -124,7 +133,7 @@ WINDobsNA = WINDobsNA(obsIndx);
 tic
 switch averagingMethod
     case 'bubble'
-        [LONobs LATobs TIMEobs HSobs WINDobs indNaN] = bubbleMethodBuoy(LONobsNA, LATobsNA, TIMEobsNA, HSobsNA, WINDobsNA, buoyTest.lon, buoyTest.lat, buoyTest.time, maxDistance, maxTimeDiff, minNumberObs);
+        [LONobs LATobs TIMEobs HSobs HSobsSTD WINDobs WINDobsSTD indNaN] = bubbleMethodBuoy(LONobsNA, LATobsNA, TIMEobsNA, HSobsNA, WINDobsNA, buoyTest.lon, buoyTest.lat, buoyTest.time, maxDistance, maxTimeDiff, minNumberObs);
     %{
     case 'box'
         
@@ -141,6 +150,7 @@ switch averagingMethod
         LATobs  = LATobsNA;
         TIMEobs = TIMEobsNA;
         HSobs   = HSobsNA;
+        
         clear LONobsNA LATobsNA TIMEobsNA HSobsNA
 end
 toc
@@ -177,7 +187,7 @@ Ocstatsp(buoyTest.hs(indNaN),HSobs,.12)
 figure
 plot(buoyTest.time, buoyTest.hs,'.')
 hold on
-plot(TIMEobs, HSobs,'ro')
+errorbar(TIMEobs, HSobs, HSobsSTD)
 grid on
 datetick('x','yy')
 

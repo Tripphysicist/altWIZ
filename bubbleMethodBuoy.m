@@ -1,4 +1,4 @@
-function [LONobs LATobs TIMEobs HSobs, WINDobs, indNaN] = bubbleMethod(obsLon, obsLat, obsTime, obsHs, obsWind, buoyLon, buoyLat, buoyTime,maxDistance,maxTimeDiff,minNumberObs) 
+function [LONobs LATobs TIMEobs HSobs, HSobsSTD, WINDobs, WINDobsSTD, indNaN] = bubbleMethod(obsLon, obsLat, obsTime, obsHs, obsWind, buoyLon, buoyLat, buoyTime,maxDistance,maxTimeDiff,minNumberObs) 
 % [LONobs LATobs TIMEobs HSobs] = bubbleMethod(obsLon, obsLat, obsTime, obsHs, gridLon,gridLat,gridTime,maxDistance,maxTimeDiff,gridStatus,minNumberObs) 
 
 % for debugging
@@ -27,8 +27,10 @@ for i = 1:skipTime:buoyTimeLength
     if length(meanIndex) >= minNumberObs
         currentHsData = obsHs(meanIndex);
         meanHsByDistance(i) = nanmean(currentHsData);
+        stdHsByDistance(i) = nanstd(currentHsData);        
         currentWindData = obsWind(meanIndex);
         meanWindByDistance(i) = nanmean(currentWindData);
+        stdWindByDistance(i) = nanstd(currentWindData);        
 %         debugCount = debugCount +1        
     end
 end
@@ -38,7 +40,8 @@ end
 indNaN = ~isnan(meanHsByDistance);
 HSobs = meanHsByDistance(indNaN);
 WINDobs = meanWindByDistance(indNaN); 
-
+HSobsSTD = stdHsByDistance(indNaN); 
+WINDobsSTD = stdWindByDistance(indNaN);
 LONobs = buoyLon(indNaN);
 LATobs = buoyLat(indNaN);
 TIMEobs = buoyTime(indNaN);
