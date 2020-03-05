@@ -39,8 +39,8 @@ averagingMethod = 'bubble';
 
 maxTimeDiffMinutes =30; %minutes
 maxTimeDiff = maxTimeDiffMinutes/(24*60); %days
-maxDistance = 200; %km radius
-minNumberObs = 5;
+maxDistance = 250; %km radius
+minNumberObs = 1;
 
 %% PART ?: load coastline data
 % It will be useful to know the proximity of the comparison point to the
