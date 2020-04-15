@@ -1,9 +1,13 @@
-function obs = getAltimeterObs(loadSatList, buoyLat, buoyLon)
+function obs = getAltimeterObsBuoy(loadSatList, buoyLat, buoyLon, altPath)
 
 count2 = 0;
+[glyph baseDir] = giveGlyph;
+
 for i = 1:length(loadSatList)
-    altPath = 'd:\Datasets\Satellite\Altimeter\Ribal_Young_2019\';
-    altFilePath = [altPath loadSatList(i).name '\'];
+    if isempty(altPath)
+        altPath = [baseDir 'Datasets' glyph 'Satellite' glyph 'Altimeter' glyph 'Ribal_Young_2019' glyph];
+    end
+    altFilePath = [altPath loadSatList(i).name glyph];
     altFileList = dir(altFilePath);
     altFileList = rmfield (altFileList,{'date','bytes','isdir','datenum'});
     altFileList = altFileList(3:end);
@@ -63,29 +67,4 @@ for i = 1:length(loadSatList)
             
         end
     end
-end
-
-
-%% quality control
-% flags: In the present database, a series of data flags defined as 1, 2,
-% 3, 4, and 9 represent Good_data, Probably_good_data, SAR-mode data or
-% possible hardware error (only used for CRYOSAT-2), Bad_data and
-% Missing_data, respectively, have been used. We will retain only good data
-% for now
-
-for i = 1:length(obs)
-    qcPassInd = find(obs(i).hsKqc ==1);
-    
-    obs(i).time = obs(i).time(qcPassInd );
-    obs(i).lat = obs(i).lat(qcPassInd );
-    obs(i).lon = obs(i).lon(qcPassInd );
-    obs(i).hsKcal = obs(i).hsKcal(qcPassInd );
-    obs(i).hsKqc = obs(i).hsKqc(qcPassInd );
-    %     obs(i).hsK = obs(i).hsK(qcPassInd );
-    %     obs(i).hsKno = obs(i).hsKno(qcPassInd );
-    %     obs(i).hsKstd = obs(i).hsKstd(qcPassInd );|
-    %WIND
-    %     obs(i).wind = obs(i).wind(qcPassInd );
-    obs(i).windCal = obs(i).windCal(qcPassInd );
-    obsLength(i) = length(obs(1).time);
 end

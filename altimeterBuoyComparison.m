@@ -12,43 +12,57 @@
 % updates:                                                                %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 
-%% The Code
+%
 % Purpose
-% This code design to take data output from the model WAVEWATCHIII and
-% compare it with nearby, contemporaneous satelitte altimeter estimations
-% of significant wave height and wind speed
+% This code was designed to take data of wave height and wind speed from 
+% a buoy and compare it with nearby, contemporaneous satelitte altimeter 
+% estimations of wave height and wind speed
 
-%% Part I: house cleaning
-tic
+%% house cleaning
+tic % start a timer
 close all
 clear
+
+%% Paths
+
+codePath = '/Users/tripp/D/Analysis/altimeterComparison/altVmodel';
+path(codePath, path); %add code path to search path
+buoyPath = '/Users/tripp/D/Analysis/altimeterComparison/mini-buoys/';
+
+% This code uses the Ribal and Young (2019) dataset. You can find it here:
+% https://www.nature.com/articles/s41597-019-0083-9
+% The dataset is large, ~100Gb. Please indicate the full path to the
+% directory here:
+
+altPath = '/Users/tripp/D/Datasets/Satellite/Altimeter/Ribal_Young_2019/'; % path to Ribal and Young data
+% choose patha and file name to save your results
+savePath = '/Users/tripp/D/Analysis/altimeterComparison/data/atlantic2016May-2017Nov'; 
+
+% The following is to ensure compatibility across platforms, only glyph
+% matters
 [glyph baseDir] = giveGlyph;
+
 %% Global Parameters
 % There are two main methods for reducing altimeter data, which generally
 % outputs data at 1 Hz. One way to do it is to use "find" and set a maximum
 % distance and time. I vizualize this as a bubble and hence it is dubbed
 % the bubble method. Another way to do it is to discritize the the grid and
 % mean everything in each bin or cobe. This I call the box method. The box
-% method, is currently about 10 times faster.
+% method, is currently about 10 times faster on gridded data, but doesn't
+% make much sense for point measurements. Thus, only the bubble method is
+% used here.
 
-% averagingMethod = 'bubble';
 averagingMethod = 'bubble';
 % averagingMethod = 'none';
 
-%% parameters for data averaging
+%% parameters for bubble method od altimeter data averaging
 
 maxTimeDiffMinutes =30; %minutes
 maxTimeDiff = maxTimeDiffMinutes/(24*60); %days
-maxDistance = 50; %km radius
+maxDistance = 100; %km radius
 minNumberObs = 5;
 
-%% PART ?: load coastline data
-% It will be useful to know the proximity of the comparison point to the
-% coast where the general quality of altimeter data degrades
-
-%% BUOY test
-
-
+%% BUOY data
 % PAPA TEST
 %{
 papaFile = 'D:\Datasets\Papa\166p1_historic.nc';
@@ -84,15 +98,17 @@ papaLon(1)= papaLon(2); %interpolation made this a NaN
 % clear timeCat lonCat latCat hsCat
 
 % CDIP MINI BUOYS
-
+% enter the full path to your buoy data here
 buoy = 'AO_MWB';
-load([baseDir 'Analysis' glyph 'AltimerComparison' glyph 'mini-buoys' glyph buoy '.mat'])
+buoyDataFile = [buoyPath buoy '.mat'];
+load(buoyDataFile)
 
 time = [];
 lon  = []; %from negative W to E poisitive 0 - 360 
 lat  = [];
 Hs   = [];
 
+%concatenate data into one vector
 fields = fieldnames(MWB);
 for i = 1:length(fields)
     time = [time; MWB.(fields{i}).time];
@@ -106,20 +122,42 @@ buoyTest.lon  = 360 + lon; %from negative W to E poisitive 0 - 360
 buoyTest.lat  = lat;
 buoyTest.hs   = Hs;
 
-
 %% PART ?: load altimeter data, version 1
 % using the Ribal and Young database
 
-loadSatList = defineSatList(buoyTest.time);
+loadSatList = defineSatList(buoyTest.time, altPath);
 
 % use model lat - lon to narrow down to files loaded, and load data from 
 % local netCDF files 
 
-obs = getAltimeterObs(loadSatList,buoyTest.lat, buoyTest.lon);
+obs = getAltimeterObsBuoy(loadSatList,buoyTest.lat, buoyTest.lon, altPath);
 
+%% quality control
+% flags: In the present database, a series of data flags defined as 1, 2,
+% 3, 4, and 9 represent Good_data, Probably_good_data, SAR-mode data or
+% possible hardware error (only used for CRYOSAT-2), Bad_data and
+% Missing_data, respectively, have been used. We will retain only good data
+% for now
+
+for i = 1:length(obs)
+    qcPassInd = find(obs(i).hsKqc ==1);
+    
+    obs(i).time = obs(i).time(qcPassInd );
+    obs(i).lat = obs(i).lat(qcPassInd );
+    obs(i).lon = obs(i).lon(qcPassInd );
+    obs(i).hsKcal = obs(i).hsKcal(qcPassInd );
+    obs(i).hsKqc = obs(i).hsKqc(qcPassInd );
+    %     obs(i).hsK = obs(i).hsK(qcPassInd );
+    %     obs(i).hsKno = obs(i).hsKno(qcPassInd );
+    %     obs(i).hsKstd = obs(i).hsKstd(qcPassInd );|
+    %WIND
+    %     obs(i).wind = obs(i).wind(qcPassInd );
+    obs(i).windCal = obs(i).windCal(qcPassInd );
+    obsLength(i) = length(obs(1).time);
+end
 %% reduce data based on time and grid status
 
-% concatenate data
+% concatenate altimeter data
 LONobsNA  = vertcat(obs(:).lon);
 LATobsNA  = vertcat(obs(:).lat);
 TIMEobsNA = vertcat(obs(:).time);
@@ -148,7 +186,7 @@ WINDobsNA = WINDobsNA(obsIndx);
 tic
 switch averagingMethod
     case 'bubble'
-        [LONobs LATobs TIMEobs HSobs HSobsSTD WINDobs WINDobsSTD indNaN] = bubbleMethodBuoy(LONobsNA, LATobsNA, TIMEobsNA, HSobsNA, WINDobsNA, buoyTest.lon, buoyTest.lat, buoyTest.time, maxDistance, maxTimeDiff, minNumberObs);
+        [pairedLon pairedLat pairedTime altHs altHsStd altWind altWindStd buoyIndNaN] = bubbleMethodBuoy(LONobsNA, LATobsNA, TIMEobsNA, HSobsNA, WINDobsNA, buoyTest.lon, buoyTest.lat, buoyTest.time, maxDistance, maxTimeDiff, minNumberObs);
     %{
     case 'box'
         
@@ -168,47 +206,21 @@ switch averagingMethod
         
         clear LONobsNA LATobsNA TIMEobsNA HSobsNA
 end
+
+% paired buoy data
+buoyHs = buoyTest.hs(buoyIndNaN);
+
+
+
+
 toc
-%}
+%% Done
+% The unaveraged altimeter data lives in *obsNA, and the averaged stuff in
+% alt*, the original buoy data is in the structure buoyTest. The paried
+% stuff is paired*, alt*, buoy*.
 
-%% %% PART ?: collocation 
-Ocstatsp(buoyTest.hs(indNaN),HSobs,.12)
+% E.g., lon, lat, time, wave height are in pairedLon, pairedLat,
+% pairedTime, buoyHs, altHs
 
-% F = scatteredInterpolant(LONobs,LATobs,TIMEobs,HSobs,'linear','none');
-% HSalt = F(papaLon,papaLat,papaTime);
-% indNaN = ~isnan(HSalt);
-% HSalt = HSalt(indNaN);
-
-% phase 1: interpolation
-
-%interp3d
-%{
-        LONobs  = vertcat(obs(:).lon);
-        LATobs  = vertcat(obs(:).lat);
-        TIMEobs = vertcat(obs(:).time);
-        HSobs   = vertcat(obs(:).hsKcal);
-        HSmd = interp1(papaTime, mdTest.hs, TIMEobs);
-        
-        indNaN = ~isnan(HSmd);
-        HSmd = HSmd(indNaN);
-        
-        HSobs  = HSobs(indNaN);
-        LONobs = LONobs(indNaN);
-        LATobs = LATobs(indNaN);
-        TIMEobs = TIMEobs(indNaN);
-%}
-
-% phase 2: kd tree
-figure
-plot(buoyTest.time, buoyTest.hs,'.')
-hold on
-errorbar(TIMEobs, HSobs, HSobsSTD)
-grid on
-datetick('x','yy')
-
-
-
-
-%% save the matched pairs, clear data and loop through the whole domain
-
-% save('yearResults2010')
+%% save the matched pairs
+% save(savePath)

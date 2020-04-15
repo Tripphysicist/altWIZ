@@ -1,4 +1,4 @@
-function loadSatList = defineSatList(buoyTime)
+function loadSatList = defineSatList(buoyTime,altPath)
 
 % Altimeter	  Freq.-Band Latitude-coverage Initial-Date Final-Date
 % GEOSAT	  Ku	     -73 to 72	       31/03/1985	31/12/1989
@@ -16,8 +16,10 @@ function loadSatList = defineSatList(buoyTime)
 % SENTINEL-3A Ku C	     -78 to 81	       01/03/2016	Ongoing
 
 %what to do with altimeters with 2 bands?
-
-altPath = 'd:\Datasets\Satellite\Altimeter\Ribal_Young_2019\';
+[glyph baseDir] = giveGlyph;
+if isempty(altPath)
+    altPath = [baseDir 'Datasets' glyph 'Satellite' glyph 'Altimeter' glyph 'Ribal_Young_2019' glyph];
+end
 satList  = dir(altPath);
 satList = rmfield (satList,{'date','bytes','isdir','datenum'});
 satList = satList(3:end);
@@ -26,9 +28,9 @@ for i = 1:length(satList)
     satFileList = dir([altPath satList(i).name]);
     satFileList = rmfield (satFileList,{'date','bytes','isdir','datenum'});
     satFileList = satFileList(3:end);
-    info = ncinfo([altPath satList(i).name '\' satFileList(1).name]);
+    info = ncinfo([altPath satList(i).name glyph satFileList(1).name]);
     %    timeOffsetMeta(i) = info.Variables(1).Attributes(3);
-    altTime = ncread([altPath satList(i).name '\' satFileList(1).name],'TIME');
+    altTime = ncread([altPath satList(i).name glyph satFileList(1).name],'TIME');
     satList(i).timeStart = altTime(1)+datenum([1985 01 01 00 00 00]);
     satList(i).timeEnd = altTime(end)+datenum([1985 01 01 00 00 00]);
 end

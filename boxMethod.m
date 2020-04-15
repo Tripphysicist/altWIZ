@@ -1,4 +1,4 @@
-function [LONobs LATobs TIMEobs HSobs] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat,maxTimeDiff,gridStatus,minNumberObs) 
+function [LONobs LATobs TIMEobs HSobs] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat, maxTimeDiff, gridStatus, minNumberObs) 
 % [LONobs LATobs TIMEobs HSobs] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat,maxTimeDiff,gridStatus,minNumberObs) 
 
 % %for debugging
@@ -9,6 +9,21 @@ function [LONobs LATobs TIMEobs HSobs] = boxMethod(obsLon, obsLat, obsTime, obsH
 % gridLon = mdTest.lon;
 % gridLat = mdTest.lat;
 % gridStatus = mdTest.gridStatus;
+
+% There is an issue with longitude jumps 359:0 at the prime meirdian, need
+% to switch to -180:180
+if sum([ismember(gridLon,359.5); ismember(gridLon,0)]) == 2
+    for i = 1:length(gridLon)
+        if gridLon(i) > 180
+            gridLon(i) = gridLon(i) - 360;
+        end       
+    end
+    for i = 1:length(obsLon)
+        if obsLon(i) > 180
+            obsLon(i) = obsLon(i) - 360;
+        end       
+    end
+end
 
 %define bin spacing
 lonBinSpacing  = .5; %degrees
@@ -77,6 +92,9 @@ indNaN = ~isnan(meanHsByBin);
 HSobs = meanHsByBin(indNaN);
 
 [LON, LAT, TIME] = ndgrid(lonBinCenter,latBinCenter,timeBinCenter);
+
+%if we converted to negative longitudes, convert back to 0-365
+
 LON  = LON(:);
 LAT  = LAT(:);
 TIME = TIME(:);
@@ -84,3 +102,11 @@ TIME = TIME(:);
 LONobs = LON(indNaN);
 LATobs = LAT(indNaN);
 TIMEobs = TIME(indNaN);
+
+if sum(LONobs<0) > 0
+    for i = 1:length(LONobs)
+        if LONobs(i) < 0
+            LONobs(i) = LONobs(i) + 360;
+        end
+    end
+end
