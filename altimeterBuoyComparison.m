@@ -1,9 +1,28 @@
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+function [pairedLon pairedLat pairedTime buoyHs altHs altHsStd altWind altWindStd buoyIndNaN] = altimeterBuoyComparison(codePath,buoyPath,altPath,savePath,options)
+% [pairedLon pairedLat pairedTime buoyHs altHs altHsStd altWind altWindStd buoyIndNaN] = altimeterBuoyComparison(codePath,buoyPath,altPath,savePath,options)
+%
+% 
+%  options(1) -> maxTimeDiff = maxTimeDiffMinutes/(24*60); %days
+%  options(2) -> maxDistance = 100; %km radius
+%  options(3) -> minNumberObs = 5;
+%  options(4) -> save output? logical 1 | 0
+%
+% e.g.
+% codePath = '/Users/tripp/D/Analysis/altimeterComparison/altVmodel';
+% buoyPath = '/Users/tripp/D/Analysis/altimeterComparison/mini-buoys/';
+% altPath = '/Users/tripp/D/Datasets/Satellite/Altimeter/Ribal_Young_2019/'; % path to Ribal and Young data
+% savePath = '/Users/tripp/D/Analysis/altimeterComparison/data/atlantic2016May-2017Nov'; 
+% options(1) =  30/(24*60);
+% options(2) =  100;
+% options(3) =  5;
+% options(4) =  0;
+% [pairedLon pairedLat pairedTime buoyHs altHs altHsStd altWind altWindStd buoyIndNaN] = altimeterBuoyComparison(codePath,buoyPath,altPath,savePath,options);
+% 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 % Script to compare buoy output to altimeter measurements of significant  %
 % wave height and wind speed                                              %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
-
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 % Author:       Clarence Olin Collins III, Ph.D.                          %
 % Affiliation:  ERDC - FRF                                                %
@@ -11,7 +30,6 @@
 % version:      1.0                                                       %
 % updates:                                                                %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
-
 %
 % Purpose
 % This code was designed to take data of wave height and wind speed from 
@@ -19,24 +37,24 @@
 % estimations of wave height and wind speed
 
 %% house cleaning
-tic % start a timer
-close all
-clear
+% tic % start a timer
+% close all
+% clear
 
 %% Paths
 
-codePath = '/Users/tripp/D/Analysis/altimeterComparison/altVmodel';
+% codePath = '/Users/tripp/D/Analysis/altimeterComparison/altVmodel';
 path(codePath, path); %add code path to search path
-buoyPath = '/Users/tripp/D/Analysis/altimeterComparison/mini-buoys/';
+% buoyPath = '/Users/tripp/D/Analysis/altimeterComparison/mini-buoys/';
 
 % This code uses the Ribal and Young (2019) dataset. You can find it here:
 % https://www.nature.com/articles/s41597-019-0083-9
 % The dataset is large, ~100Gb. Please indicate the full path to the
 % directory here:
 
-altPath = '/Users/tripp/D/Datasets/Satellite/Altimeter/Ribal_Young_2019/'; % path to Ribal and Young data
+% altPath = '/Users/tripp/D/Datasets/Satellite/Altimeter/Ribal_Young_2019/'; % path to Ribal and Young data
 % choose patha and file name to save your results
-savePath = '/Users/tripp/D/Analysis/altimeterComparison/data/atlantic2016May-2017Nov'; 
+% savePath = '/Users/tripp/D/Analysis/altimeterComparison/data/atlantic2016May-2017Nov'; 
 
 % The following is to ensure compatibility across platforms, only glyph
 % matters
@@ -57,10 +75,10 @@ averagingMethod = 'bubble';
 
 %% parameters for bubble method od altimeter data averaging
 
-maxTimeDiffMinutes =30; %minutes
-maxTimeDiff = maxTimeDiffMinutes/(24*60); %days
-maxDistance = 100; %km radius
-minNumberObs = 5;
+% maxTimeDiffMinutes =30; %minutes
+maxTimeDiff = options(1); % maxTimeDiffMinutes/(24*60); %days
+maxDistance = options(2); % 100; %km radius
+minNumberObs = options(3); %5;
 
 %% BUOY data
 % PAPA TEST
@@ -140,7 +158,7 @@ obs = getAltimeterObsBuoy(loadSatList,buoyTest.lat, buoyTest.lon, altPath);
 % for now
 
 for i = 1:length(obs)
-    qcPassInd = find(obs(i).hsKqc ==1);
+    qcPassInd = find(obs(i).hsKqc == 1 | obs(i).hsKqc == 2);
     
     obs(i).time = obs(i).time(qcPassInd );
     obs(i).lat = obs(i).lat(qcPassInd );
@@ -210,10 +228,7 @@ end
 % paired buoy data
 buoyHs = buoyTest.hs(buoyIndNaN);
 
-
-
-
-toc
+% toc
 %% Done
 % The unaveraged altimeter data lives in *obsNA, and the averaged stuff in
 % alt*, the original buoy data is in the structure buoyTest. The paried
@@ -223,4 +238,7 @@ toc
 % pairedTime, buoyHs, altHs
 
 %% save the matched pairs
-% save(savePath)
+if options(4)
+    save(savePath)
+end
+end
