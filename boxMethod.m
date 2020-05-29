@@ -1,6 +1,6 @@
-function [LONobs LATobs TIMEobs HSobs] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat, maxTimeDiff, gridStatus, minNumberObs) 
-% [LONobs LATobs TIMEobs HSobs] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat,maxTimeDiff,gridStatus,minNumberObs) 
-
+function [LONobs LATobs TIMEobs HSobs HSobsStd HSobsNoSam] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat, maxTimeDiff, gridStatus, minNumberObs) 
+% [LONobs LATobs TIMEobs HSobs HSobsStd HSobsNoSam] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat,maxTimeDiff,gridStatus,minNumberObs) 
+%
 % %for debugging
 % obsLon = LONobsNA;
 % obsLat = LATobsNA;
@@ -10,8 +10,12 @@ function [LONobs LATobs TIMEobs HSobs] = boxMethod(obsLon, obsLat, obsTime, obsH
 % gridLat = mdTest.lat;
 % gridStatus = mdTest.gridStatus;
 
+%TO DO: put in a nearest option so it grabs just one altimeter sample
+%instead of an average
+
 % There is an issue with longitude jumps 359:0 at the prime meirdian, need
 % to switch to -180:180
+
 if sum([ismember(gridLon,359.5); ismember(gridLon,0)]) == 2
     for i = 1:length(gridLon)
         if gridLon(i) > 180
@@ -26,8 +30,9 @@ if sum([ismember(gridLon,359.5); ismember(gridLon,0)]) == 2
 end
 
 %define bin spacing
-lonBinSpacing  = .5; %degrees
-latBinSpacing  = .5; %degrees
+% use native grid spacing
+lonBinSpacing  = round(gridLon(2) - gridLon(1),1); %degrees
+latBinSpacing  = round(gridLat(2) - gridLat(1),1); %degrees
 timeBinSpacing = maxTimeDiff*2; %days
 
 %define bin edges
@@ -62,6 +67,8 @@ timeLength = length(timeBinCenter);
 %allocate
 meanHsByBin = NaN(lonLength,latLength,timeLength);
 stdHsByBin =  NaN(lonLength,latLength,timeLength);
+noSamHsByBin = NaN(lonLength,latLength,timeLength);
+% nearestHsByBin = NaN(lonLength,latLength,timeLength);
 
 %loop through each dimension to average each cubic bin
 % tic
@@ -74,9 +81,10 @@ for i = 1:lonLength;
                         currentDataBin = obsHs(lonBinidx == i & latBinidx == j & timeBinidx == k);
                         if length(currentDataBin) >= minNumberObs
                             meanHsByBin(i,j,k) = nanmean(currentDataBin);
+                            stdHsByBin(i,j,k)  = nanstd(currentDataBin);
+                            noSamHsByBin(i,j,k) = length(currentDataBin);
+                            % nearestHsByBin = ? 
                         end
-                        %            stdHsByBin(i,j,k)  = nanstd(currentDataBin); Any other
-                        %            function
                     end
                 end
             end
@@ -85,11 +93,15 @@ for i = 1:lonLength;
 end
 % timerM2 = toc
 meanHsByBin = meanHsByBin(:);
-% stdHsByBin = stdHsByBin(:);
+stdHsByBin = stdHsByBin(:);
+noSamHsByBin = noSamHsByBin(:);
+
 
 indNaN = ~isnan(meanHsByBin);
 
-HSobs = meanHsByBin(indNaN);
+HSobs        = meanHsByBin(indNaN);
+HSobsStd     = stdHsByBin(indNaN);
+HSobsNoSam   = noSamHsByBin(indNaN);
 
 [LON, LAT, TIME] = ndgrid(lonBinCenter,latBinCenter,timeBinCenter);
 

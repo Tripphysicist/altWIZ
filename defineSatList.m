@@ -17,6 +17,7 @@ function loadSatList = defineSatList(buoyTime,altPath)
 
 %what to do with altimeters with 2 bands?
 [glyph baseDir] = giveGlyph;
+
 if isempty(altPath)
     altPath = [baseDir 'Datasets' glyph 'Satellite' glyph 'Altimeter' glyph 'Ribal_Young_2019' glyph];
 end
@@ -45,4 +46,7 @@ for i = 1:length(satList)
         count1 = count1 +1;
         loadSatList(count1) = satList(i);
     end
+end
+if count1 == 0;
+    loadSatList = [];
 end

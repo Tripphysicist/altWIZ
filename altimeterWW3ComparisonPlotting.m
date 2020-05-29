@@ -14,64 +14,49 @@
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 
 %% covert longitude to -180:180
-LONobsCat = deg180(LONobsCat);
+pData.lon = deg180(pData.lon);
 
-%% PART ?: calculate statistics
+% PART ?: calculate statistics
 
-%% PART ?: make simple plots
+% PART ?: make simple plots
 figure
 subplot(1,3,1)
-plot(TIMEobsCat,HSobsCat,'.')
+plot(pData.time,pData.altHs,'.')
 hold on
-plot(TIMEobsCat,HSmdCat,'.')
+plot(pData.time,pData.mdHs,'.')
 grid on
 datetick
 subplot(1,3,2)
-plot(LONobsCat,HSobsCat,'.')
+plot(pData.lon,pData.altHs,'.')
 hold on
-plot(LONobsCat,HSmdCat,'.')
+plot(pData.lon,pData.mdHs,'.')
 grid on
 subplot(1,3,3)
-plot(LATobsCat,HSobsCat,'.')
+plot(pData.lat,pData.altHs,'.')
 hold on
-plot(LATobsCat,HSmdCat,'.')
+plot(pData.lat,pData.mdHs,'.')
 grid on
-
 packfig(1,3)
 
 %subplot(1,2,2)
-L = Ocstatsp(HSobsCat,HSmdCat,0.1)
+L = Ocstatsp(pData.altHs,pData.mdHs,0.1)
 
 % distributions, histograms
 % q-q plots
 % scatter plot
 % taylor diagram
-[N,XEDGES,YEDGES,BINX,BINY] = histcounts2(HSobsCat,HSmdCat,500);
-for i =1:length(N)
-    BINXc(i) = (XEDGES(i) + XEDGES(i+1))/2;
-    BINYc(i) = (YEDGES(i) + YEDGES(i+1))/2;
-end
-figure
-pcolor(BINXc,BINYc,N)
-shading('interp')
-colormap('lansey')
-hold on
-plot(0:20,0:20,'k--')
-axis('square')
-axis([0 6 0 6])
-fontsize(20,20,20,20)
-xlabel('Altimeter Wave Height [m]')
-ylabel('WIS Wave Height [m]')
-colorbar
-shg
 
+colorScatter(pData.altHs,pData.mdHs,100)
 %% map of stats
+clear statGridCenterLat statGridCenterLon statGridEdgesLat statGridEdgesLon...
+    bias rmse nbias nrmse scatIn meanAlt meanMod dHs
 
-minLON = min(LONobsCat);
-maxLON = max(LONobsCat);
-minLAT = min(LATobsCat);
-maxLAT = max(LATobsCat);
-blockSize = 1; %[degrees]
+pData.lon = deg180(pData.lon);
+minLON = min(pData.lon);
+maxLON = max(pData.lon);
+minLAT = min(pData.lat);
+maxLAT = max(pData.lat);
+blockSize = .5; %[degrees]
 statGridEdgesLon = minLON:blockSize:maxLON;
 statGridEdgesLat = minLAT:blockSize:maxLAT;
 statGridCenterLon = statGridEdgesLon(1:end-1) + diff(statGridEdgesLon)/2;
@@ -79,19 +64,80 @@ statGridCenterLat = statGridEdgesLat(1:end-1) + diff(statGridEdgesLat)/2;
 
 for i = 1:length(statGridCenterLon)
     for j = 1:length(statGridCenterLat)
-        [index dumy] = find(LONobsCat >= statGridEdgesLon(i) & LONobsCat <= statGridEdgesLon(i+1) &...
-            LATobsCat >= statGridEdgesLat(j) & LATobsCat <= statGridEdgesLat(j+1));
-        dHS = HSobsCat(index)-HSmdCat(index);
-        bias(i,j) = mean(dHS);
+        [index dumy] = find(pData.lon >= statGridEdgesLon(i) & pData.lon <= statGridEdgesLon(i+1) &...
+            pData.lat >= statGridEdgesLat(j) & pData.lat <= statGridEdgesLat(j+1));
+        meanAlt(i,j) = nanmean(pData.altHs(index));
+        meanMod(i,j) = nanmean(pData.mdHs(index));        
+        dHS = pData.altHs(index)-pData.mdHs(index);
+        bias(i,j) = meanMod(i,j) - meanAlt(i,j);
+        nbias(i,j) = bias(i,j)./meanAlt(i,j);
         rmse(i,j) = sqrt(mean(dHS.^2));
+        nrmse(i,j) = sqrt(mean(dHS.^2)/meanAlt(i,j).^2);
+        scatIn(i,j) = rmse(i,j)/meanAlt(i,j);      
     end
 end
+
+bHS = pData.altHs-pData.mdHs;
+rHS = sqrt((pData.altHs-pData.mdHs).^2);
+
+figure
+m_proj('miller','lon',[minLON maxLON],'lat',[minLAT maxLAT]);
+m_pcolor(deg180(mdCol.lon),mdCol.lat,mean(mdCol.hs,3)')
+shading('interp')
+m_coast('patch',[.8 .8 .8]);
+m_grid('box','fancy','tickdir','out');
+title('mean model wave height (native res.)')
+fontsize(16,16,16,16)
+h = colorbar;
+ylabel(h, '[m]')
+colormap('lansey')
+caxis([0 10])
+
+figure
+m_proj('miller','lon',[minLON maxLON],'lat',[minLAT maxLAT]);
+m_pcolor(statGridCenterLon,statGridCenterLat,meanMod')
+shading('interp')
+m_coast('patch',[.8 .8 .8]);
+m_grid('box','fancy','tickdir','out');
+title('mean model wave height')
+fontsize(16,16,16,16)
+h = colorbar;
+ylabel(h, '[m]')
+colormap('lansey')
+caxis([0 10])
+
+figure
+m_proj('miller','lon',[minLON maxLON],'lat',[minLAT maxLAT]);
+m_pcolor(statGridCenterLon,statGridCenterLat,meanAlt')
+shading('interp')
+m_coast('patch',[.8 .8 .8]);
+m_grid('box','fancy','tickdir','out');
+title('mean altimeter wave height')
+fontsize(16,16,16,16)
+h = colorbar;
+ylabel(h, '[m]')
+colormap('lansey')
+caxis([0 10])
+
+figure
+m_proj('miller','lon',[minLON maxLON],'lat',[minLAT maxLAT]);
+m_scatter(pData.lon,pData.lat,1,rHS,'.')
+m_coast('patch',[.8 .8 .8]);
+m_grid('box','fancy','tickdir','out');
+title('bias')
+title('rse')
+fontsize(16,16,16,16)
+h = colorbar;
+ylabel(h, '[m]')
+colormap('jet')
+caxis([0 1])
 
 
 figure
 m_proj('miller','lon',[minLON maxLON],'lat',[minLAT maxLAT]);
 m_pcolor(statGridCenterLon,statGridCenterLat,rmse')
 shading('interp')
+hold on
 m_coast('patch',[.8 .8 .8]);
 m_grid('box','fancy','tickdir','out');
 title('rmse')
@@ -114,18 +160,60 @@ ylabel(h, '[m]')
 colormap('lansey')
 caxis([-1 1])
 
+figure
+m_proj('miller','lon',[minLON maxLON],'lat',[minLAT maxLAT]);
+m_pcolor(statGridCenterLon,statGridCenterLat,nrmse')
+shading('interp')
+hold on
+m_coast('patch',[.8 .8 .8]);
+m_grid('box','fancy','tickdir','out');
+title('nrmse')
+fontsize(16,16,16,16)
+h = colorbar;
+ylabel(h, '[m]')
+colormap('jet')
+caxis([0 1])
+
+figure
+m_proj('miller','lon',[minLON maxLON],'lat',[minLAT maxLAT]);
+m_pcolor(statGridCenterLon,statGridCenterLat,scatIn')
+shading('interp')
+hold on
+m_coast('patch',[.8 .8 .8]);
+m_grid('box','fancy','tickdir','out');
+title('scatIn')
+fontsize(16,16,16,16)
+h = colorbar;
+ylabel(h, '[m]')
+colormap('jet')
+caxis([0 1])
+
+
+figure
+m_proj('miller','lon',[minLON maxLON],'lat',[minLAT maxLAT]);
+m_pcolor(statGridCenterLon,statGridCenterLat,nbias')
+shading('interp')
+m_coast('patch',[.8 .8 .8]);
+m_grid('box','fancy','tickdir','out');
+title('nbias')
+fontsize(16,16,16,16)
+h = colorbar;
+ylabel(h, '[m]')
+colormap('lansey')
+caxis([-1 1])
+
 
 
 %% months and seasons
-date = datevec(TIMEobsCat);
+date = datevec(pData.time);
 
 for month = 1:12
     monthIndex = date(:,2) == month;
-    eval(['LON' num2str(month) '= LONobsCat(monthIndex);'])
-    eval(['LAT' num2str(month) '= LATobsCat(monthIndex);'])
-    eval(['TIME' num2str(month) '= TIMEobsCat(monthIndex);'])
-    eval(['HSobs' num2str(month) '= HSobsCat(monthIndex);'])
-    eval(['HSmd' num2str(month) '= HSmdCat(monthIndex);'])           
+    eval(['LON' num2str(month) '= pData.lon(monthIndex);'])
+    eval(['LAT' num2str(month) '= pData.lat(monthIndex);'])
+    eval(['TIME' num2str(month) '= pData.time(monthIndex);'])
+    eval(['HSobs' num2str(month) '= pData.altHs(monthIndex);'])
+    eval(['HSmd' num2str(month) '= pData.mdHs(monthIndex);'])           
 end
 
 for i = 1:length(statGridCenterLon)

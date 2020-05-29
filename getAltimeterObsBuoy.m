@@ -51,18 +51,19 @@ for i = 1:length(loadSatList)
                 obs(count2).hsKcal   = ncread(fileName, 'SWH_KA_CAL');
                 obs(count2).hsKqc = ncread(fileName, 'SWH_KA_quality_control');
                 %                 obs(count2).hsKno = ncread(fileName, 'SWH_KA_num_obs');
-                %                 obs(count2).hsKstd = ncread(fileName, 'SWH_KA_std_dev');
+ %               obs(count2).hsKstd = ncread(fileName, 'SWH_KA_std_dev');
             else
                 %                 obs(count2).hsK   = ncread(fileName, 'SWH_KU');
                 obs(count2).hsKcal   = ncread(fileName, 'SWH_KU_CAL');
                 obs(count2).hsKqc = ncread(fileName, 'SWH_KU_quality_control');
                 %                 obs(count2).hsKno = ncread(fileName, 'SWH_KU_num_obs');
-                %                 obs(count2).hsKstd = ncread(fileName, 'SWH_KU_std_dev');
+%                obs(count2).hsKstd = ncread(fileName, 'SWH_KU_std_dev');
             end
             
             %WIND
             %             obs(count2).wind    = ncread(fileName, 'WSPD');
                 obs(count2).windCal = ncread(fileName, 'WSPD_CAL');
+                obs(count2).dist2coast = ncread(fileName, 'DIST2COAST');
             
             
         end
