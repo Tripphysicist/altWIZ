@@ -1,64 +1,77 @@
-function [pairedLon pairedLat pairedTime buoyHs altHs altHsStd altWind altWindStd buoyIndNaN] = altimeterBuoyComparison(codePath,buoyPath,altPath,savePath,options)
-% [pairedLon pairedLat pairedTime buoyHs altHs altHsStd altWind altWindStd buoyIndNaN] = altimeterBuoyComparison(codePath,buoyPath,altPath,savePath,options)
+function [pData rawAlt buoyData] = altimeterBuoyComparison(codePath,buoyPath,altPath,savePath,options)
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% Script to compare wave buoy measurements to contemperaneous altimeter   %
+% measurements.                                                           %
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 %
-% 
-%  options(1) -> maxTimeDiff = maxTimeDiffMinutes/(24*60); %days
-%  options(2) -> maxDistance = 100; %km radius
-%  options(3) -> minNumberObs = 5;
-%  options(4) -> save output? logical 1 | 0
+%  OUTPUT
+%  pData - structure of averaged wave height data from altimeter and paired
+%  with buoy dara on a shared lon, lat, time
+%  pData.lon - longitude in degrees 
+%  pData.lat - latitude in degrees 
+%  pData.time - time stamp
+%  pData.altHs average altimeter significant wave height 
+%  pData.wind average altimeter wind speed
+%  pData.altHsStd standard deviation from  averaging method 
+%  pData.altHsNoSam - number of samples
+%  pData.buoyHs - buoy significant wave height
+%  pData.options - documentation of options used
+%  rawAlt - structure of 1 Hz altimeter data
+%  rawAlt.lon 
+%  rawAlt.lat 
+%  rawAlt.time
+%  rawAlt.Hs 
+%  rawAlt.wind 
+%
+%  INPUT
+%  Paths - in order path to the directory for code, directory with model
+%  files, directory with altimeter altimeter data, and full path and file
+%  name for saving results
+%
+%  OPTIONS structure (not optional)
+%  options.averagingMethod = 1 = 'box'; 2 = 'bubble'; 3 = 'none'; Box
+%  and bubble method are more fully described below. Default for buoy is
+%  bubble method. Results are similar.
+%
+%  options for pairing data
+%  options.maxTimeDiff = maxTimeDiffMinutes/(24*60); %maximum time
+%                difference [days]
+%  options.maxDistance = 25; %maximum space distance [km] (radius for
+%                bubble method.
+%  options.minNumberObs = 7; %minimum number of observations for
+%                averaging
+%  generic options
+%  options.QC = 1; strictest quality control or 2 to include coastal data
+%  options.save -> save output? logical 1 | 0
 %
 % e.g.
 % codePath = '/Users/tripp/D/Analysis/altimeterComparison/altVmodel';
-% buoyPath = '/Users/tripp/D/Analysis/altimeterComparison/mini-buoys/';
+% buoyPath = '/Users/tripp/D/Analysis/altimeterComparison/mini-buoys/AO_MWB.mat';
 % altPath = '/Users/tripp/D/Datasets/Satellite/Altimeter/Ribal_Young_2019/'; % path to Ribal and Young data
-% savePath = '/Users/tripp/D/Analysis/altimeterComparison/data/atlantic2016May-2017Nov'; 
-% options(1) =  30/(24*60);
-% options(2) =  100;
-% options(3) =  5;
-% options(4) =  0;
-% [pairedLon pairedLat pairedTime buoyHs altHs altHsStd altWind altWindStd buoyIndNaN] = altimeterBuoyComparison(codePath,buoyPath,altPath,savePath,options);
-% 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
-% Script to compare buoy output to altimeter measurements of significant  %
-% wave height and wind speed                                              %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% savePath = '/Users/tripp/D/Analysis/altimeterComparison/data/atlantic2016May-2017Nov';
+% options.maxTimeDiff     =  30/(24*60);
+% options.maxDistance     =  25;
+% options.minNumberObs    =  7;
+% options.QC              =  1;
+% options.save            =  0;
+% [pData rawAlt buoyData] = altimeterBuoyComparison(codePath,buoyPath,altPath,savePath,options)
+%
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 % Author:       Clarence Olin Collins III, Ph.D.                          %
 % Affiliation:  ERDC - FRF                                                %
-% created:      02/25/2020                                                %
+% created:      10/28/2019                                                %
 % version:      1.0                                                       %
 % updates:                                                                %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
-%
-% Purpose
-% This code was designed to take data of wave height and wind speed from 
-% a buoy and compare it with nearby, contemporaneous satelitte altimeter 
-% estimations of wave height and wind speed
+% 
+% Purpose:
+% This code design to take data output from a buoy or buoys  and
+% compare it with nearby, contemporaneous satelitte altimeter estimations
+% of significant wave height and wind speed
 
-%% house cleaning
-% tic % start a timer
-% close all
-% clear
-
+tic
 %% Paths
-
-% codePath = '/Users/tripp/D/Analysis/altimeterComparison/altVmodel';
 path(codePath, path); %add code path to search path
-% buoyPath = '/Users/tripp/D/Analysis/altimeterComparison/mini-buoys/';
-
-% This code uses the Ribal and Young (2019) dataset. You can find it here:
-% https://www.nature.com/articles/s41597-019-0083-9
-% The dataset is large, ~100Gb. Please indicate the full path to the
-% directory here:
-
-% altPath = '/Users/tripp/D/Datasets/Satellite/Altimeter/Ribal_Young_2019/'; % path to Ribal and Young data
-% choose patha and file name to save your results
-% savePath = '/Users/tripp/D/Analysis/altimeterComparison/data/atlantic2016May-2017Nov'; 
-
-% The following is to ensure compatibility across platforms, only glyph
-% matters
-[glyph baseDir] = giveGlyph;
 
 %% Global Parameters
 % There are two main methods for reducing altimeter data, which generally
@@ -70,18 +83,16 @@ path(codePath, path); %add code path to search path
 % make much sense for point measurements. Thus, only the bubble method is
 % used here.
 
-averagingMethod = 'bubble';
+% averagingMethod = 'bubble';
 % averagingMethod = 'none';
 
 %% parameters for bubble method od altimeter data averaging
 
-% maxTimeDiffMinutes =30; %minutes
-maxTimeDiff = options(1); % maxTimeDiffMinutes/(24*60); %days
-maxDistance = options(2); % 100; %km radius
-minNumberObs = options(3); %5;
+maxTimeDiff = options.maxTimeDiff;
+maxDistance = options.maxDistance;
+minNumberObs = options.minNumberObs;
 
-%% BUOY data
-% PAPA TEST
+%% PAPA TEST
 %{
 papaFile = 'D:\Datasets\Papa\166p1_historic.nc';
 papaInfo = ncinfo(papaFile);
@@ -97,58 +108,95 @@ papaLat(1)= papaLat(2); %interpolation made this a NaN
 papaLon(1)= papaLon(2); %interpolation made this a NaN
 %}
 
-% buoyTest.time = papaTime;
-% buoyTest.lon  = papaLon;
-% buoyTest.lat  = papaLat;
-% buoyTest.hs   = papaHs;
+% buoyData.time = papaTime;
+% buoyData.lon  = papaLon;
+% buoyData.lat  = papaLat;
+% buoyData.hs   = papaHs;
 
-% NDBC 
+%% CDIP 
+% cdipURL = buoyPath;
+% cdipTimeOffset = datenum([1970 01 01 00 00 00]);
+% cdipTime = double(ncread(cdipURL,'waveTime'))/(60*60*24) + cdipTimeOffset;
+% cdipHs = ncread(cdipURL,'waveHs');
+% cdipGPStime = double(ncread(cdipURL,'gpsTime'))/(60*60*24) + cdipTimeOffset;
+% cdipGPSlat = ncread(cdipURL,'gpsLatitude');
+% cdipGPSlon = ncread(cdipURL,'gpsLongitude');
+% cdipLat = interp1(cdipGPStime, cdipGPSlat, cdipTime);
+% cdipLon = interp1(cdipGPStime, cdipGPSlon, cdipTime) + 360;
+% cdipLat(1)= cdipLat(2); %interpolation made this a NaN
+% cdipLon(1)= cdipLon(2); %interpolation made this a NaN
+%
+% 
+% buoyData.time = cdipTime;
+% buoyData.lon  = cdipLon;
+% buoyData.lat  = cdipLat;
+% buoyData.hs   = cdipHs;
+
+
+%% NDBC 
 % buoy = '46029';
 % buoy = '41048';
 % buoy = '46001';
 % buoy = '44011';
 % type = 'h';
 % load([baseDir 'Analysis' glyph 'Jensen Buoy Work' glyph 'test' glyph buoy glyph buoy type '.mat'])
-% buoyTest.time = timeCat;
-% buoyTest.lon  = lonCat;
-% buoyTest.lat  = latCat;
-% buoyTest.hs   = hsCat;
+% buoyData.time = timeCat;
+% buoyData.lon  = lonCat;
+% buoyData.lat  = latCat;
+% buoyData.hs   = hsCat;
 % clear timeCat lonCat latCat hsCat
 
-% CDIP MINI BUOYS
-% enter the full path to your buoy data here
-buoy = 'AO_MWB';
-buoyDataFile = [buoyPath buoy '.mat'];
-load(buoyDataFile)
+%% SIO MINI BUOYS
 
-time = [];
-lon  = []; %from negative W to E poisitive 0 - 360 
-lat  = [];
-Hs   = [];
+% load(buoyPath)
+% 
+% time = [];
+% lon  = []; %from negative W to E poisitive 0 - 360 
+% lat  = [];
+% Hs   = [];
+% 
+% %concatenate data into one vector
+% fields = fieldnames(MWB);
+% for i = 1:length(fields)
+%     time = [time; MWB.(fields{i}).time];
+%     lon = [lon; MWB.(fields{i}).lon];
+%     lat = [lat; MWB.(fields{i}).lat];
+%     Hs = [Hs; MWB.(fields{i}).Hs];
+% end
+% 
+% buoyData.time = time;
+% buoyData.lon  = 360 + lon; %from negative W to E poisitive 0 - 360 
+% buoyData.lat  = lat;
+% buoyData.hs   = Hs;
 
-%concatenate data into one vector
-fields = fieldnames(MWB);
-for i = 1:length(fields)
-    time = [time; MWB.(fields{i}).time];
-    lon = [lon; MWB.(fields{i}).lon];
-    lat = [lat; MWB.(fields{i}).lat];
-    Hs = [Hs; MWB.(fields{i}).Hs];
-end
+%% ITOP
+%EASI-N
+% load([buoyPath 'EASI_Nv2.mat'])
+% buoyData.time = EN.var.yday + datenum([2010 01 01 00 00 00]);
+% buoyData.lon  =  126.968.*ones(length(buoyData.time),1);
+% buoyData.lat  =  21.238.*ones(length(buoyData.time),1);
+% buoyData.hs   = EN.par.int.Hm0;
+% clear EN
 
-buoyTest.time = time;
-buoyTest.lon  = 360 + lon; %from negative W to E poisitive 0 - 360 
-buoyTest.lat  = lat;
-buoyTest.hs   = Hs;
+%EASI-S
+load([buoyPath 'EASI_Sv5.mat'])
+buoyData.time = ES.var.yday + datenum([2010 01 01 00 00 00]);
+buoyData.lon  =  127.258.*ones(length(buoyData.time),1);
+buoyData.lat  =  19.683.*ones(length(buoyData.time),1);
+buoyData.hs   = ES.par.int.Hm0;
+clear ES
 
-%% PART ?: load altimeter data, version 1
-% using the Ribal and Young database
+%% load altimeter data, version 1
+% This code uses the Ribal and Young (2019) dataset. You can find it here:
+% https://www.nature.com/articles/s41597-019-0083-9
+% The dataset is large, ~100Gb.
 
-loadSatList = defineSatList(buoyTest.time, altPath);
+loadSatList = defineSatList(buoyData.time, altPath);
 
 % use model lat - lon to narrow down to files loaded, and load data from 
 % local netCDF files 
 
-obs = getAltimeterObsBuoy(loadSatList,buoyTest.lat, buoyTest.lon, altPath);
+obs = getAltimeterObsBuoy(loadSatList,buoyData.lat, buoyData.lon, altPath);
 
 %% quality control
 % flags: In the present database, a series of data flags defined as 1, 2,
@@ -158,20 +206,24 @@ obs = getAltimeterObsBuoy(loadSatList,buoyTest.lat, buoyTest.lon, altPath);
 % for now
 
 for i = 1:length(obs)
-    qcPassInd = find(obs(i).hsKqc == 1 | obs(i).hsKqc == 2);
-    
-    obs(i).time = obs(i).time(qcPassInd );
-    obs(i).lat = obs(i).lat(qcPassInd );
-    obs(i).lon = obs(i).lon(qcPassInd );
-    obs(i).hsKcal = obs(i).hsKcal(qcPassInd );
-    obs(i).hsKqc = obs(i).hsKqc(qcPassInd );
-    %     obs(i).hsK = obs(i).hsK(qcPassInd );
-    %     obs(i).hsKno = obs(i).hsKno(qcPassInd );
-    %     obs(i).hsKstd = obs(i).hsKstd(qcPassInd );|
+    switch options.QC
+        case 2
+            qcPassInd = find(obs(i).hsKqc == 1 | obs(i).hsKqc == 2);
+        otherwise
+            qcPassInd = find(obs(i).hsKqc == 1);
+    end
+    obs(i).time = obs(i).time(qcPassInd);
+    obs(i).lat = obs(i).lat(qcPassInd);
+    obs(i).lon = obs(i).lon(qcPassInd);
+    obs(i).hsKcal = obs(i).hsKcal(qcPassInd);
+    obs(i).hsKqc = obs(i).hsKqc(qcPassInd);
+    % obs(i).hsK = obs(i).hsK(qcPassInd );
+    % obs(i).hsKno = obs(i).hsKno(qcPassInd );
+    % obs(i).hsKstd = obs(i).hsKstd(qcPassInd);
     %WIND
-    %     obs(i).wind = obs(i).wind(qcPassInd );
+    % obs(i).wind = obs(i).wind(qcPassInd );
     obs(i).windCal = obs(i).windCal(qcPassInd );
-    obsLength(i) = length(obs(1).time);
+    % obsLength(i) = length(obs(1).time);
 end
 %% reduce data based on time and grid status
 
@@ -181,15 +233,17 @@ LATobsNA  = vertcat(obs(:).lat);
 TIMEobsNA = vertcat(obs(:).time);
 HSobsNA   = vertcat(obs(:).hsKcal);
 WINDobsNA = vertcat(obs(:).windCal);
+DISTobsNA = vertcat(obs(:).dist2coast);
 
-[obsIndx dum2] = find(TIMEobsNA >= min(buoyTest.time) - maxTimeDiff...
-    & TIMEobsNA <= max(buoyTest.time) + maxTimeDiff);
+[obsIndx dum2] = find(TIMEobsNA >= min(buoyData.time) - maxTimeDiff...
+    & TIMEobsNA <= max(buoyData.time) + maxTimeDiff);
 
-LONobsNA  = LONobsNA(obsIndx);
-LATobsNA  = LATobsNA(obsIndx);
-TIMEobsNA = TIMEobsNA(obsIndx);
-HSobsNA   = HSobsNA(obsIndx);
-WINDobsNA = WINDobsNA(obsIndx);
+rawAlt.lon = LONobsNA(obsIndx);
+rawAlt.lat = LATobsNA(obsIndx);
+rawAlt.time = TIMEobsNA(obsIndx);
+rawAlt.Hs = HSobsNA(obsIndx);
+rawAlt.wind = WINDobsNA(obsIndx);
+rawAlt.dist = DISTobsNA(obsIndx);
 
 %% Reducing data by averaging over space and time
 % METHOD I
@@ -201,44 +255,27 @@ WINDobsNA = WINDobsNA(obsIndx);
 % as the gridded method, which takes data from much further away.
 
 % to do: add gaussian weighted average
-tic
-switch averagingMethod
-    case 'bubble'
-        [pairedLon pairedLat pairedTime altHs altHsStd altWind altWindStd buoyIndNaN] = bubbleMethodBuoy(LONobsNA, LATobsNA, TIMEobsNA, HSobsNA, WINDobsNA, buoyTest.lon, buoyTest.lat, buoyTest.time, maxDistance, maxTimeDiff, minNumberObs);
-    %{
-    case 'box'
-        
-        %% Method 2
-        % This creates a gridded cube with demsions lat, lon, & time and
-        % the average in each of those cubes. It takes too long (added 30 minutes
-        % to a 2 x 2 degree grid (from like 30 seconds).
-        
-        [LONobs LATobs TIMEobs HSobs] = boxMethodBuoy(LONobsNA, LATobsNA, TIMEobsNA, HSobsNA, buoyTest.lon, buoyTest.lat, maxTimeDiff, minNumberObs);
-        %}
-    case 'none'
-        
-        LONobs  = LONobsNA;
-        LATobs  = LATobsNA;
-        TIMEobs = TIMEobsNA;
-        HSobs   = HSobsNA;
-        
-        clear LONobsNA LATobsNA TIMEobsNA HSobsNA
-end
-
-% paired buoy data
-buoyHs = buoyTest.hs(buoyIndNaN);
-
+[pData.lon pData.lat pData.time pData.altHsMean pData.altHsStd pData.altHsNearest...
+    pData.altWindMean pData.altWindStd pData.altWindNearest pData.buoyIndNaN]...
+    = bubbleMethodBuoy(LONobsNA,LATobsNA, TIMEobsNA, HSobsNA, WINDobsNA,...
+    buoyData.lon, buoyData.lat,buoyData.time, maxDistance, maxTimeDiff, minNumberObs);
+% average altimetered data paired with buoy data
+pData.buoyHs = buoyData.hs(pData.buoyIndNaN);
+pData.options = options;
+pData.options.paths.buoyPath =buoyPath;
+pData.options.paths.savePath = savePath;
+pData.options.paths.codePath = codePath;
+pData.options.paths.altPath = altPath;
 % toc
 %% Done
 % The unaveraged altimeter data lives in *obsNA, and the averaged stuff in
-% alt*, the original buoy data is in the structure buoyTest. The paried
+% alt*, the original buoy data is in the structure buoyData. The paried
 % stuff is paired*, alt*, buoy*.
 
 % E.g., lon, lat, time, wave height are in pairedLon, pairedLat,
 % pairedTime, buoyHs, altHs
 
 %% save the matched pairs
-if options(4)
-    save(savePath)
-end
+if options.save
+    save(savePath,'pData','rawAlt','buoyData')
 end
