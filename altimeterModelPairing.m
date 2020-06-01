@@ -1,10 +1,10 @@
-function [pData] = altimeterWW3Comparison(codePath,mdPath,altPath,savePath,options)
-% [pData] = altimeterBuoyComparison(codePath,buoyPath,altPath,savePath,options)
+function [pData] = altimeterModelPairing(codePath,mdPath,altPath,savePath,options)
+% [pData] = altimeterModelPairing(codePath,buoyPath,altPath,savePath,options)
 %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
-% Script to compare WW3 output to altimeter measurements of significant   %
-% wave height .                                                           %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% % Script to compare wave model output to altimeter measurements of .    % 
+% % significant wave height .                                             %
+% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 %
 %  OUTPUT
 %  pData - structure of wave height data from altimeter and models with
@@ -40,22 +40,23 @@ function [pData] = altimeterWW3Comparison(codePath,mdPath,altPath,savePath,optio
 % mdPath = '/Users/tripp/D/Analysis/altimeterComparison/modelData/AtlanticYearRun/';
 % altPath = '/Users/tripp/D/Datasets/Satellite/Altimeter/Ribal_Young_2019/'; % path to Ribal and Young data
 % savePath = '/Users/tripp/D/Analysis/altimeterComparison/data/atlantic2016May-2017Nov';
-% options.averagingMethod =  1;
+% options.altDatabase     = 'RY19'; % or 'ESA'
+% options.averagingMethod =  1; 
 % options.maxTimeDiff     =  30/(24*60);
 % options.maxDistance     =  25;
 % options.minNumberObs    =  7;
 % options.loopSize        =  5;
 % options.QC              =  1;
 % options.save            =  0;
-% [pData] = altimeterWW3Comparison(codePath,mdPath,altPath,savePath,options)
+% [pData] = altimeterModelPairing(codePath,mdPath,altPath,savePath,options)
 %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
-% Author:       Clarence Olin Collins III, Ph.D.                          %
-% Affiliation:  ERDC - FRF                                                %
-% created:      10/28/2019                                                %
-% version:      1.0                                                       %
-% updates:                                                                %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% % Author:       Clarence Olin Collins III, Ph.D.                        %
+% % Affiliation:  ERDC - FRF                                              %
+% % created:      06/01/2020                                              %
+% % version:      1.1                                                     %
+% % updates:                                                              %
+% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 % TO DO:
 % (1) make it more robust to multiple different grid resolutions, right
 %     now it works great if the grid resolution is 0.5 degrees.
@@ -118,7 +119,7 @@ HSmdCat       = [];
 % VmdCat = [];
 
 loopCount = 0;
-for fileNum=1;%:length(mdFileList);
+for fileNum=1:length(mdFileList);
     %load model data, try a couple of variable naming conventions
     try
         mdCol.lat = ncread([mdPath mdFileList(fileNum).name], 'latitude');
@@ -230,7 +231,12 @@ for fileNum=1;%:length(mdFileList);
             %% load altimeter data, using the Ribal and Young database
             
             %use model time range to exclude some satellite missions
-            loadSatList = defineSatList(mdTest.time,altPath);
+            switch options.altDatabase
+                case 'RY19'
+                loadSatList = defineSatListRY19(mdTest.time,altPath);
+                case 'ESA'
+                loadSatList = defineSatListESA(mdTest.time,altPath);
+            end
             
             if isempty(loadSatList)
                 disp(['no data in database for the time period ' num2str(mdTest.time(1))...
@@ -244,7 +250,12 @@ for fileNum=1;%:length(mdFileList);
             
             % use model lat - lon to narrow down to files loaded, and load data from
             % local netCDF files
-            obs = getAltimeterObsRY19(loadSatList, mdTest.lat, mdTest.lon, mdTest.lonO, altPath, crossesPrime);
+            switch options.altDatabase
+                case 'RY19'
+                obs = getRY19AltimeterObsModel(loadSatList, mdTest.lat, mdTest.lon, mdTest.lonO, altPath, crossesPrime, options.QC);
+                case 'ESA'
+                obs = getESAAltimeterObsModel(loadSatList, mdTest.time, altPath, options.QC);
+            end
             
             % if there are no obs, skip this loop
             if isempty(obs)
@@ -255,52 +266,27 @@ for fileNum=1;%:length(mdFileList);
                 disp('raw altimeter observations exist')
             end
             
-            %% quality control
-            % flags: In the present database, a series of data flags defined as 1, 2,
-            % 3, 4, and 9 represent Good_data, Probably_good_data, SAR-mode data or
-            % possible hardware error (only used for CRYOSAT-2), Bad_data and
-            % Missing_data, respectively, have been used. We will retain only good data
-            % for now
             
-            % observations <50km from a coast are flagged as probably good.
-            % So to access these, one would need to also allow probably
-            % good data
-            
-            for i = 1:length(obs)
-                if options.QC == 5
-                    continue
-                elseif options.QC == 2
-                    qcPassInd = find(obs(i).hsKqc == 1 | obs(i).hsKqc == 2);
-                else %default is strict QC
-                    qcPassInd = find(obs(i).hsKqc == 1);
-                end
-                obs(i).time = obs(i).time(qcPassInd);
-                obs(i).lat = obs(i).lat(qcPassInd);
-                obs(i).lon = obs(i).lon(qcPassInd);
-                obs(i).hsKcal = obs(i).hsKcal(qcPassInd);
-                obs(i).hsKqc = obs(i).hsKqc(qcPassInd);
-                % obs(i).hsK = obs(i).hsK(qcPassInd );
-                % obs(i).hsKno = obs(i).hsKno(qcPassInd );
-                % obs(i).hsKstd = obs(i).hsKstd(qcPassInd);
-                % obs(i).dist2coast = obs(i).dist2coast(qcPassInd);
-                %WIND
-                % obs(i).wind = obs(i).wind(qcPassInd );
-                % obs(i).windCal = obs(i).windCal(qcPassInd );
-                obsLength(i) = length(obs(i).time);
-            end
-            
-            %% reduce data based on time
+            %% reduce data based on lon, lat, time
             
             % concatenate data
             LONobsNA  = vertcat(obs(:).lon);
             LATobsNA  = vertcat(obs(:).lat);
             TIMEobsNA = vertcat(obs(:).time);
-            HSobsNA   = vertcat(obs(:).hsKcal);
+            HSobsNA   = vertcat(obs(:).hs);
+            % HSERobs   = vertcat(obs(:).hsEr); % error estimate
+            % HSQCobs   = vertcat(obs(:).hsQC); % QC flag
+            % SATIDobsNA = vertcat(obs(:).satID)); % Satellite Mission ID
             %WIND
-            % WINDobsNA = vertcat(obs(:).windCal);
+            % WINDobsNA = vertcat(obs(:).wind);
             
+            % NEED TO CHECK LON for consistency (180 or 360)
             [obsIndx dum2] = find(TIMEobsNA >= min(mdTest.time) - maxTimeDiff...
-                & TIMEobsNA <= max(mdTest.time) + maxTimeDiff);
+                                & TIMEobsNA <= max(mdTest.time) + maxTimeDiff...
+                                & LONobsNA  >= min(mdTest.lonO) - 1 ...
+                                & LONobsNA  <= max(mdTest.lonO) + 1 ...
+                                & LATobsNA  >= min(mdTest.lat) - 1 ...
+                                & LATobsNA  <= max(mdTest.lat) + 1);
             
             LONobsNA  = LONobsNA(obsIndx);
             LATobsNA  = LATobsNA(obsIndx);
@@ -319,23 +305,6 @@ for fileNum=1;%:length(mdFileList);
             %WIND
             %WINDobsNA = WINDobsNA(obsIndx);
             
-            
-            %% check for redundant data
-            % the point of this is to make sure that some data isn't
-            % accidentally loaded mulitple times before averaging.
-            % TO DO ensure there isn't real overlap from different
-            % missions
-            %             [~ kun] = unique(LONobsNA);
-            %             uLon    = setdiff(1:length(LONobsNA),kun);
-            %             [~ kun] = unique(LATobsNA);
-            %             uLat    = setdiff(1:length(LATobsNA),kun);
-            %             [~ kun] = unique(TIMEobsNA);
-            %             uTime    = setdiff(1:length(TIMEobsNA),kun);
-            %             uLonLat = intersect(uLon,uLat);
-            %             uLonLatTime = intersect(uLonLat,uTime);
-            %             if ~isempty(uLonLatTime)
-            %
-            %             end
             %% Reduce data by averaging over space and time
             switch averagingMethod
                 case 'bubble'
