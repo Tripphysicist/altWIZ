@@ -1,4 +1,4 @@
-function loadSatList = defineSatList(buoyTime,altPath)
+function loadSatList = defineSatListRY19(buoyTime,altPath)
 
 % Altimeter	  Freq.-Band Latitude-coverage Initial-Date Final-Date
 % GEOSAT	  Ku	     -73 to 72	       31/03/1985	31/12/1989
@@ -18,9 +18,6 @@ function loadSatList = defineSatList(buoyTime,altPath)
 %what to do with altimeters with 2 bands?
 [glyph baseDir] = giveGlyph;
 
-if isempty(altPath)
-    altPath = [baseDir 'Datasets' glyph 'Satellite' glyph 'Altimeter' glyph 'Ribal_Young_2019' glyph];
-end
 satList  = dir(altPath);
 satList = rmfield (satList,{'date','bytes','isdir','datenum'});
 satList = satList(3:end);
