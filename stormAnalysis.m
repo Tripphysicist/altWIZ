@@ -4,7 +4,7 @@
 clear
 close all
 distCount=0;
-for maxDistance = 250;
+for maxDistance = 250
     %cmaxDistance = 500;
     maxTimeDiff = .5/24; %half hour
     distCount = distCount + 1;
@@ -18,9 +18,14 @@ for maxDistance = 250;
     % mdPath = '/Users/tripp/D/Analysis/altimeterComparison/modelData/SACS/Matthew/SACS_TP_0021_HIS_basin_l1_field/wis_saccs_basin_l1_SACS_T.nc';
     % stormPath = '/Users/tripp/D/Analysis/altimeterComparison/storm-tracks/2016/matthew/matthew_best_track_no_header.csv';
     %% BONNIE
-    pairedDataPath = '/Users/tripp/D/Analysis/altimeterComparison/data/atlantic2016MayBonnie.mat';
-    mdPath = '/Users/tripp/D/Analysis/altimeterComparison/modelData/tau6AtlanticYearRun/ww3.201605.nc';
-    stormTemp = getStormTrack(2016,'BONNIE');
+%     pairedDataPath = '/Users/tripp/D/Analysis/altimeterComparison/data/atlantic2016MayBonnie.mat';
+%     mdPath = '/Users/tripp/D/Analysis/altimeterComparison/modelData/tau6AtlanticYearRun/ww3.201605.nc';
+%     stormTemp = getStormTrack(2016,'BONNIE');
+
+    %% NICOLE
+     pairedDataPath = '/Users/tripp/D/Analysis/altimeterComparison/data/atlantic_2016_Oct_Nicole.mat';
+     mdPath = '/Users/tripp/D/Analysis/altimeterComparison/modelData/Nicole/ww3.201610.nc';
+     stormTemp = getStormTrack(2016,'NICOLE');
     %%
     %load raw altimeter paired with model
     load(pairedDataPath,'pData');
@@ -215,13 +220,13 @@ for maxDistance = 250;
     axis('equal')
     plot(200*cos(theta),200*sin(theta),'--')
     plot(300*cos(theta),300*sin(theta),'--')
-    plot(400*cos(theta),400*sin(theta),'--')
-    plot(500*cos(theta),500*sin(theta),'--')
-    plot(600*cos(theta),600*sin(theta),'--')
-    plot(700*cos(theta),700*sin(theta),'--')
-    plot(800*cos(theta),800*sin(theta),'--')
-    plot(900*cos(theta),900*sin(theta),'--')
-    plot(1000*cos(theta),1000*sin(theta),'--')
+%    plot(400*cos(theta),400*sin(theta),'--')
+%    plot(500*cos(theta),500*sin(theta),'--')
+%    plot(600*cos(theta),600*sin(theta),'--')
+%    plot(700*cos(theta),700*sin(theta),'--')
+%    plot(800*cos(theta),800*sin(theta),'--')
+%    plot(900*cos(theta),900*sin(theta),'--')
+%    plot(1000*cos(theta),1000*sin(theta),'--')
     % plot(r.*cosd(stormRefAngle),r.*sind(stormRefAngle),'o');
     scatter(r.*cosd(stormRefAngle),r.*sind(stormRefAngle),1000,stormCat.altHs-stormCat.mdHs,'.');
     xlabel('distance from eye [km]')
