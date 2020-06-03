@@ -1,4 +1,4 @@
-function [LONobs LATobs TIMEobs HSmean, HSobsSTD, HSnearest, WINDmean, WINDobsSTD, WINDnearest, indNaN] = bubbleMethod(obsLon, obsLat, obsTime, obsHs, obsWind, buoyLon, buoyLat, buoyTime,maxDistance,maxTimeDiff,minNumberObs)
+function [LONobs, LATobs, TIMEobs, HSmean, HSobsSTD, HSnearest, WINDmean, WINDobsSTD, WINDnearest, indNaN] = bubbleMethod(obsLon, obsLat, obsTime, obsHs, obsWind, buoyLon, buoyLat, buoyTime,maxDistance,maxTimeDiff,minNumberObs)
 % [LONobs LATobs TIMEobs HSobs] = bubbleMethod(obsLon, obsLat, obsTime, obsHs, gridLon,gridLat,gridTime,maxDistance,maxTimeDiff,gridStatus,minNumberObs)
 
 % for debugging
@@ -33,7 +33,7 @@ for i = 1:buoyTimeLength
     a=sin((deltaLat)/2).^2 + cos(lat1).*cos(lat2) .* sin(deltaLon/2).^2;
     c=2*atan2(sqrt(a),sqrt(1-a));
     distance = R.*c;    %Haversine distance    
-    [meanIndex dum2] = find(distance<=maxDistance &  abs(buoyTime(i) - obsTime) <= maxTimeDiff);
+    [meanIndex , ~] = find(distance<=maxDistance &  abs(buoyTime(i) - obsTime) <= maxTimeDiff);
     if length(meanIndex) >= minNumberObs
         currentHsData = obsHs(meanIndex);
         meanHsByDistance(i) = nanmean(currentHsData);
@@ -43,7 +43,7 @@ for i = 1:buoyTimeLength
         stdWindByDistance(i) = nanstd(currentWindData);
         %         debugCount = debugCount +1
         currentDistance = distance(meanIndex);
-        [dummy sortIndex] = sort(currentDistance);
+        [~ , sortIndex] = sort(currentDistance);
         nearestHs(i) = currentHsData(sortIndex(1));
         nearestWind(i) = currentWindData(sortIndex(1));        
         disp([num2str(100*i./buoyTimeLength) ' %'])

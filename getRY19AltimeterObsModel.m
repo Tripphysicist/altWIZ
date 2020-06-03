@@ -8,15 +8,15 @@ function obs = getRY19AltimeterObsModel(loadSatList, mdLat, mdLon, mdLonO, altPa
 %  OUTPUT
 %  obs - structure of wave height data from altimeter and models with
 %  shared lon, lat, time
-%  obs.lon - longitude in degrees 
-%  obs.lat - latitude in degrees 
+%  obs.lon - longitude in degrees
+%  obs.lat - latitude in degrees
 %  obs.time - time (MATLAB datenum)
-%  obs.hs - calibrated as detailed in RY19 
-%  obs.hsEr - the standard deviation of the hs raw data 
+%  obs.hs - calibrated as detailed in RY19
+%  obs.hsEr - the standard deviation of the hs raw data
 %  obs.hsQC - flags: In the present database, a series of data flags defined as 1, 2,
 %             3, 4, and 9 represent Good_data, Probably_good_data, SAR-mode data or
 %             possible hardware error (only used for CRYOSAT-2), Bad_data and
-%             Missing_data, respectively, have been used. 
+%             Missing_data, respectively, have been used.
 %
 % QC NOTE: observations <50km from a coast are flagged as probably good.
 % So to access these, one would need to also allow probably
@@ -40,7 +40,7 @@ function obs = getRY19AltimeterObsModel(loadSatList, mdLat, mdLon, mdLonO, altPa
 % % updates:                                                              %
 % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 
-[glyph baseDir] = giveGlyph;
+[glyph , ~] = giveGlyph;
 count2 = 0;
 for i = 1:length(loadSatList)
     altFilePath = [altPath loadSatList(i).name glyph];
@@ -48,13 +48,13 @@ for i = 1:length(loadSatList)
     altFileList = rmfield (altFileList,{'date','bytes','isdir','datenum'});
     altFileList = altFileList(3:end);
     for j = 1:length(altFileList)
-        altNorth  = str2num(altFileList(j).name(end-16:end-14));
+        altNorth  = str2double(altFileList(j).name(end-16:end-14));
         if altFileList(j).name(end-13) == 'S'
             altNorth = -altNorth;
         else
         end
         
-        altEast   = str2num(altFileList(j).name(end-11:end-9));
+        altEast   = str2double(altFileList(j).name(end-11:end-9));
         
         % for rectilinear grid, add one to the greater than test because
         % each alt file runs from altNorth to altNorth + 1
@@ -72,20 +72,26 @@ for i = 1:length(loadSatList)
                 
                 fileName = [altFilePath altFileList(j).name];
                 %            altInfo = ncinfo(fileName);
-                currentAltInfo = ncinfo(fileName);
                 count2 = count2 + 1;
                 
                 % load data
+                
+                %ping the file to make sure its working
+                try
+                    info   = ncread(fileName);
+                catch
+                    disp(['error opening ' fileName])
+                    continue
+                end
+                
+                
                 satTimeOffset = datenum([1985 01 01 00 00 00]); %same for all
-                
-                currentTime   = ncread(fileName, 'TIME') + satTimeOffset;
-                
                 obs(count2).time = ncread(fileName, 'TIME') + satTimeOffset;
                 obs(count2).lat  = ncread(fileName, 'LATITUDE');
                 obs(count2).lat  = double(obs(count2).lat);
                 obs(count2).lon  = ncread(fileName, 'LONGITUDE');
                 obs(count2).lon  = double(obs(count2).lon);
-                obs(count2).satID = loadSatList(i).name; 
+                obs(count2).satID = loadSatList(i).name;
                 % try C band
                 %             obs(count2).hsC   = ncread(fileName, 'SWH_C');
                 %             obs(count2).hsCqc = ncread(fileName, 'SWH_C_quality_control');
@@ -95,14 +101,14 @@ for i = 1:length(loadSatList)
                 if  strcmp(loadSatList(i).name,'SARAL')
                     %                 obs(count2).hsK   = ncread(fileName, 'SWH_KA');
                     obs(count2).hs   = ncread(fileName, 'SWH_KA_CAL');
-%                    obs(count2).hsEr   = ncread(fileName, 'SWH_KA_std_dev');
+                    %                    obs(count2).hsEr   = ncread(fileName, 'SWH_KA_std_dev');
                     obs(count2).hsQC = ncread(fileName, 'SWH_KA_quality_control');
                     %                 obs(count2).hsKno = ncread(fileName, 'SWH_KA_num_obs');
                 else
                     %                 obs(count2).hsK   = ncread(fileName, 'SWH_KU');
                     obs(count2).hs   = ncread(fileName, 'SWH_KU_CAL');
-%                    obs(count2).hsEr   = ncread(fileName, 'SWH_KA_std_dev');
-                    obs(count2).hsQC = ncread(fileName, 'SWH_KA_quality_control');
+                    %                    obs(count2).hsEr   = ncread(fileName, 'SWH_KU_std_dev');
+                    obs(count2).hsQC = ncread(fileName, 'SWH_KU_quality_control');
                     %                 obs(count2).hsKno = ncread(fileName, 'SWH_KU_num_obs');
                 end
                 
@@ -116,20 +122,21 @@ for i = 1:length(loadSatList)
             if altNorth + 1 >= mdLat(1) & altNorth <= mdLat(end) & ...
                     altEast + 1 >= mdLon(1) & altEast  <= mdLon(end)
                 
-                %                 disp(['model lon - lat ' num2str(mdLon(1)) '-' num2str(mdLon(end))...
-                %                     ':' num2str(mdLat(1)) '-' num2str(mdLat(end))])
-                %                 disp(['altNorth = ' num2str(altNorth)])
-                %                 disp(['normal altEast = ' num2str(altEast)])
                 fileName = [altFilePath altFileList(j).name];
-                %            altInfo = ncinfo(fileName);
-                currentAltInfo = ncinfo(fileName);
+
                 count2 = count2 + 1;
+                
+                
+                %ping the file to make sure its working
+                try
+                    info   = ncread(fileName);
+                catch
+                    disp(['error opening ' fileName])
+                    continue
+                end
                 
                 % load data
                 satTimeOffset = datenum([1985 01 01 00 00 00]); %same for all
-                
-                currentTime   = ncread(fileName, 'TIME') + satTimeOffset;
-                
                 obs(count2).time = ncread(fileName, 'TIME') + satTimeOffset;
                 obs(count2).lat  = ncread(fileName, 'LATITUDE');
                 obs(count2).lat  = double(obs(count2).lat);
@@ -188,10 +195,10 @@ for i = 1:length(obs)
     obs(i).lon = obs(i).lon(qcPassInd);
     obs(i).hs = obs(i).hs(qcPassInd);
     obs(i).hsQC = obs(i).hsQC(qcPassInd);
-%    obs(i).hsEr = obs(i).hsEr(qcPassInd);
-%    obs(i).satID = obs(i).satID(qcPassInd);
-
+    %    obs(i).hsEr = obs(i).hsEr(qcPassInd);
+    %    obs(i).satID = obs(i).satID(qcPassInd);
+    
     %WIND
     % obs(i).wind = obs(i).wind(qcPassInd );
- 
+    
 end

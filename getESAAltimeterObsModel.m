@@ -1,5 +1,5 @@
-function obs = getESAAltimeterObsModel(loadSatList, mdTime, altPath, QC)
-% obs = getESAAltimeterObsModel(loadSatList, mdTime, altPath, QC)
+function obs = getESAAltimeterObs(loadSatList, inputTime, altPath, QC)
+% obs = getESAAltimeterObsModel(loadSatList, inputTime, altPath, QC)
 %
 % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 % % Script to load ESA data in to workspace                               %
@@ -28,8 +28,8 @@ function obs = getESAAltimeterObsModel(loadSatList, mdTime, altPath, QC)
 %
 %  INPUT
 %  loadSatList - list of satellites to load
-%  mdTime  - model time
-%  altPath - path to RY19 data
+%  inputTime  - model, buoy, or storm time
+%  altPath - path to ESA data
 %
 % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 % % Author:       Clarence Olin Collins III, Ph.D.                        %
@@ -54,8 +54,8 @@ dataVersion = 'v1.1';
 [glyph , ~] = giveGlyph;
 count2 = 0;
 
-startDay = floor(mdTime(1));
-endDay   = ceil(mdTime(end));
+startDay = floor(inputTime(1));
+endDay   = ceil(inputTime(end));
 days = startDay:1:endDay;
 dates = datevec(days);
 dirYear = num2str(dates(:,1));
@@ -95,6 +95,13 @@ for i = 1:length(loadSatList)
             fileName = [altFilePath altFileList(k).name];
             
             % load data
+            %ping the file to make sure its working
+            try 
+                info   = ncread(fileName);
+            catch 
+                disp(['error opening ' fileName])
+                continue
+            end
             
             satTimeOffset = datenum([1981 01 01 00 00 00]); %same for all
             timeTemp = ncread(fileName, 'time')./(24*60*60); %convert from seconds to days

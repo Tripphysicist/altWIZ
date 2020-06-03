@@ -196,35 +196,9 @@ loadSatList = defineSatList(buoyData.time, altPath);
 % use model lat - lon to narrow down to files loaded, and load data from 
 % local netCDF files 
 
-obs = getAltimeterObsBuoy(loadSatList,buoyData.lat, buoyData.lon, altPath);
+obs = getRY19AltimeterObsBuoy(loadSatList,buoyData.lat, buoyData.lon, altPath, options.QC);
 
-%% quality control
-% flags: In the present database, a series of data flags defined as 1, 2,
-% 3, 4, and 9 represent Good_data, Probably_good_data, SAR-mode data or
-% possible hardware error (only used for CRYOSAT-2), Bad_data and
-% Missing_data, respectively, have been used. We will retain only good data
-% for now
 
-for i = 1:length(obs)
-    switch options.QC
-        case 2
-            qcPassInd = find(obs(i).hsKqc == 1 | obs(i).hsKqc == 2);
-        otherwise
-            qcPassInd = find(obs(i).hsKqc == 1);
-    end
-    obs(i).time = obs(i).time(qcPassInd);
-    obs(i).lat = obs(i).lat(qcPassInd);
-    obs(i).lon = obs(i).lon(qcPassInd);
-    obs(i).hsKcal = obs(i).hsKcal(qcPassInd);
-    obs(i).hsKqc = obs(i).hsKqc(qcPassInd);
-    % obs(i).hsK = obs(i).hsK(qcPassInd );
-    % obs(i).hsKno = obs(i).hsKno(qcPassInd );
-    % obs(i).hsKstd = obs(i).hsKstd(qcPassInd);
-    %WIND
-    % obs(i).wind = obs(i).wind(qcPassInd );
-    obs(i).windCal = obs(i).windCal(qcPassInd );
-    % obsLength(i) = length(obs(1).time);
-end
 %% reduce data based on time and grid status
 
 % concatenate altimeter data

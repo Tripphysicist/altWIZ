@@ -1,4 +1,4 @@
-function loadSatList = defineSatListRY19(buoyTime,altPath)
+function [loadSatList, satList] = defineSatListRY19(buoyTime,altPath)
 
 % Altimeter	  Freq.-Band Latitude-coverage Initial-Date Final-Date
 % GEOSAT	  Ku	     -73 to 72	       31/03/1985	31/12/1989
