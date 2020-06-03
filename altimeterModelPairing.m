@@ -119,12 +119,17 @@ HSmdCat       = [];
 % VmdCat = [];
 
 loopCount = 0;
-for fileNum=1:length(mdFileList);
+for fileNum=1:length(mdFileList)
     %load model data, try a couple of variable naming conventions
+    
+    %update this section to look at the info file for variable names..
+    % modelInfo = ncinfo([mdPath mdFileList(fileNum).name]);
+    
     try
         mdCol.lat = ncread([mdPath mdFileList(fileNum).name], 'latitude');
-    catch SACSfile
+    catch 
         mdCol.lat = ncread([mdPath mdFileList(fileNum).name], 'lat');
+        SACSfile
     end
     mdCol.lat = double(mdCol.lat);
     try
@@ -175,8 +180,8 @@ for fileNum=1:length(mdFileList);
     
     
     %loop over each grid chunk
-    for bigLoopLon = 1:loopSize;
-        for bigLoopLat = 1:loopSize;
+    for bigLoopLon = 1:loopSize
+        for bigLoopLat = 1:loopSize
             loopCount = loopCount + 1;
             %deal with last loop if not evenly divided
             if bigLoopLon < loopSize
@@ -271,6 +276,8 @@ for fileNum=1:length(mdFileList);
             
             % concatenate data
             LONobsNA  = vertcat(obs(:).lon);
+            % make sure this is 0 - 360
+            LONobsNA(LONobsNA<0) = LONobsNA(LONobsNA<0)+360; %0 - 360
             LATobsNA  = vertcat(obs(:).lat);
             TIMEobsNA = vertcat(obs(:).time);
             HSobsNA   = vertcat(obs(:).hs);
@@ -281,10 +288,10 @@ for fileNum=1:length(mdFileList);
             % WINDobsNA = vertcat(obs(:).wind);
             
             % NEED TO CHECK LON for consistency (180 or 360)
-            [obsIndx dum2] = find(TIMEobsNA >= min(mdTest.time) - maxTimeDiff...
+            [obsIndx , ~] = find(TIMEobsNA >= min(mdTest.time) - maxTimeDiff...
                                 & TIMEobsNA <= max(mdTest.time) + maxTimeDiff...
-                                & LONobsNA  >= min(mdTest.lonO) - 1 ...
-                                & LONobsNA  <= max(mdTest.lonO) + 1 ...
+                                & LONobsNA  >= min(mdTest.lon) - 1 ...
+                                & LONobsNA  <= max(mdTest.lon) + 1 ...
                                 & LATobsNA  >= min(mdTest.lat) - 1 ...
                                 & LATobsNA  <= max(mdTest.lat) + 1);
             
@@ -308,7 +315,7 @@ for fileNum=1:length(mdFileList);
             %% Reduce data by averaging over space and time
             switch averagingMethod
                 case 'bubble'
-                    [LONobs LATobs TIMEobs HSobs HSobsStd HSobsNoSam] = ...
+                    [LONobs , LATobs , TIMEobs , HSobs , HSobsStd , HSobsNoSam] = ...
                         bubbleMethod(LONobsNA, LATobsNA, TIMEobsNA,...
                         HSobsNA, mdTest.lon, mdTest.lat, mdTest.time,...
                         maxDistance, maxTimeDiff, mdTest.gridStatus,...
@@ -317,7 +324,7 @@ for fileNum=1:length(mdFileList);
                     % This creates a gridded cube with demsions lat, lon, & time and
                     % the average in each of those cubes. It takes too long (added 30 minutes
                     % to a 2 x 2 degree grid (from like 30 seconds).
-                    [LONobs LATobs TIMEobs HSobs HSobsStd HSobsNoSam] = ...
+                    [LONobs , LATobs , TIMEobs , HSobs , HSobsStd , HSobsNoSam] = ...
                         boxMethod(LONobsNA, LATobsNA, TIMEobsNA, HSobsNA,...
                         mdTest.lon, mdTest.lat, maxTimeDiff, mdTest.gridStatus,...
                         minNumberObs);
@@ -343,7 +350,7 @@ for fileNum=1:length(mdFileList);
             if crossesPrime
                 lonOffset = abs(min(mdTest.lonO));
                 mdNewLon = double(mdTest.lonO + lonOffset);
-                [LONmd LATmd TIMEmd] = ndgrid(mdNewLon,mdTest.lat,mdTest.time);
+                [LONmd , LATmd , TIMEmd] = ndgrid(mdNewLon,mdTest.lat,mdTest.time);
                 Fmodel = scatteredInterpolant(double(LONmd(:)), double(LATmd(:))...
                     , TIMEmd(:), mdTest.hs(:),'linear','none'); % can't run on full domain
                 obsNewLon = double(deg180(LONobs) + lonOffset);
@@ -352,7 +359,7 @@ for fileNum=1:length(mdFileList);
                 HSmd = HSmd(indNaN);
                 
             else
-                [LONmd LATmd TIMEmd] = ndgrid(mdTest.lon,mdTest.lat,mdTest.time);
+                [LONmd , LATmd , TIMEmd] = ndgrid(mdTest.lon,mdTest.lat,mdTest.time);
                 Fmodel = scatteredInterpolant(double(LONmd(:)), double(LATmd(:))...
                     , TIMEmd(:), mdTest.hs(:),'linear','none'); % can't run on full domain
                 HSmd = Fmodel(LONobs, LATobs, TIMEobs);
@@ -428,5 +435,5 @@ if ~strcmp(averagingMethod,'none')
     pData.altNoSam = HSobsNoSamCat;
 end
 if options.save
-    save(savePath,'pData')
+    save(savePath,'pData','mdCol')
 end
