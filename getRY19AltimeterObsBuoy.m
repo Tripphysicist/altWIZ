@@ -1,4 +1,49 @@
 function obs = getRY19AltimeterObsBuoy(loadSatList, buoyLat, buoyLon, altPath, QC)
+% function obs = getRY19AltimeterObsBuoy(loadSatList, buoyLat, buoyLon, altPath, QC)
+%
+% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% % Script to load RY19 data in to workspace                              %
+% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+%
+%  OUTPUT
+%  obs - structure of wave height data from altimeter and models with
+%  shared lon, lat, time
+%  obs.lon - longitude in degrees
+%  obs.lat - latitude in degrees
+%  obs.time - time (MATLAB datenum)
+%  obs.hs - calibrated as detailed in RY19
+%  obs.hsEr - the standard deviation of the hs raw data
+%  obs.hsQC - flags: In the present database, a series of data flags defined as 1, 2,
+%             3, 4, and 9 represent Good_data, Probably_good_data, SAR-mode data or
+%             possible hardware error (only used for CRYOSAT-2), Bad_data and
+%             Missing_data, respectively, have been used.
+%
+% QC NOTE: observations <50km from a coast are flagged as probably good.
+% So to access these, one would need to also allow probably
+% good data
+%
+%
+%  INPUT
+%  loadSatList - list of satellites to load
+%  buoyLon  - model longitude (0 - 360)
+%  buoyLonO - model longitude (-180 - 180)
+%  buoyLat  - model latitude
+%  altPath - path to RY19 data
+%  crossesPrime - logical to indicate whether the longitude grid crosses
+%                 the prime merdian
+%
+% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% % Author:       Clarence Olin Collins III, Ph.D.                        %
+% % Affiliation:  ERDC - FRF                                              %
+% % created:      06/01/2020                                              %
+% % version:      1.0                                                     %
+% % updates:                                                              %
+% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% references:
+% Ribal, A. and Young, I.R., 2019. 33 years of globally calibrated wave 
+% height and wind speed data based on altimeter observations. Scientific 
+% data, 6(1), pp.1-15.
+% https://doi.org/10.1038/s41597-019-0083-9
 
 count2 = 0;
 [glyph, ~] = giveGlyph;

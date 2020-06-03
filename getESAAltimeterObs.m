@@ -47,9 +47,6 @@ function obs = getESAAltimeterObs(loadSatList, inputTime, altPath, QC)
 % function that gets loads altimeter data into the workspace depending on
 % the model time provided. This searches the ESA database.
 
-
-
-
 dataVersion = 'v1.1';
 [glyph , ~] = giveGlyph;
 count2 = 0;

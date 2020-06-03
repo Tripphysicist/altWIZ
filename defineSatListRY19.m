@@ -1,7 +1,7 @@
 function [loadSatList, satList] = defineSatListRY19(buoyTime,altPath)
-
+% function [loadSatList, satList] = defineSatListRY19(buoyTime,altPath)
+%
 % Altimeter	  Freq.-Band Latitude-coverage Initial-Date Final-Date
-% GEOSAT	  Ku	     -73 to 72	       31/03/1985	31/12/1989
 % ERS-1	      Ku	     -81.5 to 81.5	   01/08/1991	02/06/1996
 % TOPEX	      Ku C	     -66 to 66	       25/09/1992	08/10/2005
 % ERS-2	      Ku	     -81.5 to 81.5	   29/04/1995	11/05/2009
@@ -10,10 +10,8 @@ function [loadSatList, satList] = defineSatListRY19(buoyTime,altPath)
 % ENVISAT	  Ku S	     -82 to 82	       14/05/2002	08/04/2012
 % JASON-2	  Ku C	     -66.15 to 66.15   04/07/2008	Ongoing
 % CRYOSAT-2	  Ku	     -88 to 88	       14/07/2010	Ongoing
-% HY-2A	      Ku C	     -81 to 80	       01/10/2011	06/06/2018
 % SARAL	      Ka	     -81.49 to 81.49   14/03/2013	Ongoing
 % JASON-3	  Ku C	     -66.15 to 66.15   12/02/2016	Ongoing
-% SENTINEL-3A Ku C	     -78 to 81	       01/03/2016	Ongoing
 
 %what to do with altimeters with 2 bands?
 [glyph baseDir] = giveGlyph;

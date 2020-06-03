@@ -259,7 +259,7 @@ for fileNum=1:length(mdFileList)
                 case 'RY19'
                 obs = getRY19AltimeterObsModel(loadSatList, mdTest.lat, mdTest.lon, mdTest.lonO, altPath, crossesPrime, options.QC);
                 case 'ESA'
-                obs = getESAAltimeterObsModel(loadSatList, mdTest.time, altPath, options.QC);
+                obs = getESAAltimeterObs(loadSatList, mdTest.time, altPath, options.QC);
             end
             
             % if there are no obs, skip this loop

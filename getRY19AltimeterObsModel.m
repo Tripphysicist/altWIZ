@@ -39,6 +39,11 @@ function obs = getRY19AltimeterObsModel(loadSatList, mdLat, mdLon, mdLonO, altPa
 % % version:      1.0                                                     %
 % % updates:                                                              %
 % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% references:
+% Ribal, A. and Young, I.R., 2019. 33 years of globally calibrated wave 
+% height and wind speed data based on altimeter observations. Scientific 
+% data, 6(1), pp.1-15.
+% https://doi.org/10.1038/s41597-019-0083-9
 
 [glyph , ~] = giveGlyph;
 count2 = 0;
