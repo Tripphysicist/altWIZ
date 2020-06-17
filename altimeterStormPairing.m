@@ -93,8 +93,8 @@ if length(oneIndex) == 1
 else
     stormCount = 0;
     stormI.stormCount = [];
-    for i = 1:length(oneIndex)-1
-        if i < length(oneIndex)-1
+    for i = 1:length(oneIndex)
+        if i < length(oneIndex)
             currentIndex = (oneIndex(i):oneIndex(i+1)-1);
         else
             currentIndex = (oneIndex(i):length(stormData.time));
@@ -198,6 +198,16 @@ for i=1:max(stormI.stormCount)
         %         datetick('x')
     end
 end
+
+% for i = 1:length(stormObs)
+%     if isempty(stormObs(i).hs)
+%         continue
+%     end
+%     [stormObs(i).xDistance, stormObs(i).yDistance, stormObs(i).distance2center] = latlon2xy(stormObs(i).lat,stormObs(i).lon,stormI.lat(i),stormI.lon(i));
+%     stormObs(i).altAngle =  deg360(90 - (180/pi).*atan2(stormObs(i).yDistance,stormObs(i).xDistance));
+%     stormObs(i).stormRefAngle = deg360(270-(stormObs(i).altAngle + stormI.dir(i)));
+% end
+%%
 %%
 %WIND
 %WINDobsNA = WINDobsNA(obsIndx);

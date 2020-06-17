@@ -94,7 +94,7 @@ for i = 1:length(loadSatList)
             % load data
             %ping the file to make sure its working
             try 
-                info   = ncread(fileName);
+                info   = ncinfo(fileName);
             catch 
                 disp(['error opening ' fileName])
                 continue
@@ -111,7 +111,7 @@ for i = 1:length(loadSatList)
 %            obs(count2).hsEr = ncread(fileName, 'swh_uncertainty');
             obs(count2).hsQC   = ncread(fileName, 'swh_quality');
             %WIND
-            %         obs(count2).wind   = ncread(fileName, 'wind_speed_alt');
+            obs(count2).wind   = ncread(fileName, 'wind_speed_alt');
         end
     end
 end
@@ -128,23 +128,26 @@ end
 %       only or the quality check could not fully assess if it is a bad or
 %       good value (suspect).
 % 3 - good the measurement is usable.
-
-for i = 1:length(obs)
-    if QC == 5
-        continue
-    elseif QC == 2
-        qcPassInd = find(obs(i).hsQC == 3 | obs(i).hsQC == 2);
-    else %default is strict QC
-        qcPassInd = find(obs(i).hsQC == 3);
+if count2 == 0
+    disp('failed to load obs')
+    obs = [];
+else
+    for i = 1:length(obs)
+        if QC == 5
+            continue
+        elseif QC == 2
+            qcPassInd = find(obs(i).hsQC == 3 | obs(i).hsQC == 2);
+        else %default is strict QC
+            qcPassInd = find(obs(i).hsQC == 3);
+        end
+        obs(i).time = obs(i).time(qcPassInd);
+        obs(i).lat = obs(i).lat(qcPassInd);
+        obs(i).lon = obs(i).lon(qcPassInd);
+        obs(i).hs = obs(i).hs(qcPassInd);
+        %    obs(i).hsEr = obs(i).hsEr(qcPassInd);
+        %    obs(i).hsQC = obs(i).hsQC(qcPassInd);
+        %    obs(i).satID = obs(i).satID(qcPassInd);
+        % WIND
+        % obs(i).wind = obs(i).wind(qcPassInd );
     end
-    obs(i).time = obs(i).time(qcPassInd);
-    obs(i).lat = obs(i).lat(qcPassInd);
-    obs(i).lon = obs(i).lon(qcPassInd);
-    obs(i).hs = obs(i).hs(qcPassInd);
-%    obs(i).hsEr = obs(i).hsEr(qcPassInd);
-%    obs(i).hsQC = obs(i).hsQC(qcPassInd);
-%    obs(i).satID = obs(i).satID(qcPassInd);
-    % WIND
-    % obs(i).wind = obs(i).wind(qcPassInd );
 end
-

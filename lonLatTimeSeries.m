@@ -7,6 +7,7 @@ hold on
 plot(time,mdHs,'.')
 grid on
 datetick
+legend('altimeter','model')
 ylabel('Wave Height [m]');
 
 
@@ -16,7 +17,6 @@ hold on
 plot(lon,mdHs,'.')
 grid on
 xlabel('Longitude [\circW]');
-
 
 subplot(1,3,3)
 plot(lat,altHs,'.')

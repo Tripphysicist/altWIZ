@@ -49,9 +49,6 @@ count2 = 0;
 [glyph, ~] = giveGlyph;
 
 for i = 1:length(loadSatList)
-    if isempty(altPath)
-        altPath = [baseDir 'Datasets' glyph 'Satellite' glyph 'Altimeter' glyph 'Ribal_Young_2019' glyph];
-    end
     altFilePath = [altPath loadSatList(i).name glyph];
     altFileList = dir(altFilePath);
     altFileList = rmfield (altFileList,{'date','bytes','isdir','datenum'});
@@ -77,7 +74,7 @@ for i = 1:length(loadSatList)
             satTimeOffset = datenum([1985 01 01 00 00 00]); %same for all
             %ping the file to make sure its working
             try 
-                info   = ncread(fileName);
+                info   = ncinfo(fileName);
             catch
                 disp(['error opening ' fileName])
                 continue
@@ -131,7 +128,7 @@ for i = 1:length(obs)
     obs(i).lat = obs(i).lat(qcPassInd);
     obs(i).lon = obs(i).lon(qcPassInd);
     obs(i).hs = obs(i).hs(qcPassInd);
-    obs(i).hsQC = obs(i).hsQC(qcPassInd);
+%   obs(i).hsQC = obs(i).hsQC(qcPassInd);
     %WIND
     obs(i).wind = obs(i).wind(qcPassInd );
 end

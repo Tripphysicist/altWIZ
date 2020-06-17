@@ -17,6 +17,9 @@ meanHsByDistance = NaN(buoyTimeLength,1);
 meanWindByDistance = NaN(buoyTimeLength,1);
 stdHsByDistance = NaN(buoyTimeLength,1);
 stdWindByDistance = NaN(buoyTimeLength,1);
+nearestHs = NaN(buoyTimeLength,1);
+nearestWind = NaN(buoyTimeLength,1);
+
 % tic
 % debugCount = 0;
 tic

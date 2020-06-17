@@ -4,7 +4,7 @@
 clear
 close all
 distCount=0;
-for maxDistance = 250
+for maxDistance = 250;
     %cmaxDistance = 500;
     maxTimeDiff = .5/24; %half hour
     distCount = distCount + 1;
@@ -237,4 +237,55 @@ for maxDistance = 250
     axis('square')
     shg
     fontsize(20,20,20,20)
+end
+
+%%
+theta = linspace(0,2*pi,1000);
+
+plot(100*cos(theta),100*sin(theta),'--')
+hold on
+axis('equal')
+plot(200*cos(theta),200*sin(theta),'--')
+plot(300*cos(theta),300*sin(theta),'--')
+xlabel('distance from eye [km]')
+ylabel('distance from eye [km]')
+grid on
+h = colorbar;
+ylabel(h, 'wave height difference [m]')
+axis('square')
+shg
+fontsize(20,20,20,20)
+
+for i = 1:length(stormObs)
+    if isempty(stormObs(i).hs)
+        continue
+    end    
+plot(stormObs(i).distance2center.*cosd(stormObs(i).stormRefAngle),stormObs(i).distance2center.*sind(stormObs(i).stormRefAngle),'o');
+% scatter(r.*cosd(stormRefAngle),r.*sind(stormRefAngle),1000,stormCat.altHs-stormCat.mdHs,'.');
+shg
+end
+%%
+blockSize = 10; %[degrees]
+minLON = min(pData.lon);
+maxLON = max(pData.lon);
+minLAT = min(pData.lat);
+maxLAT = max(pData.lat);
+statGridEdgesx = minLON:blockSize:maxLON;
+statGridEdgesLat = minLAT:blockSize:maxLAT;
+statGridCenterLon = statGridEdgesLon(1:end-1) + diff(statGridEdgesLon)/2;
+statGridCenterLat = statGridEdgesLat(1:end-1) + diff(statGridEdgesLat)/2;
+
+for i = 1:length(statGridCenterLon)
+    for j = 1:length(statGridCenterLat)
+        [index dumy] = find(pData.lon >= statGridEdgesLon(i) & pData.lon <= statGridEdgesLon(i+1) &...
+            pData.lat >= statGridEdgesLat(j) & pData.lat <= statGridEdgesLat(j+1));
+        meanAlt(i,j) = nanmean(pData.altHs(index));
+        meanMod(i,j) = nanmean(pData.mdHs(index));        
+        dHS = pData.altHs(index)-pData.mdHs(index);
+        bias(i,j) = meanMod(i,j) - meanAlt(i,j);
+        nbias(i,j) = bias(i,j)./meanAlt(i,j);
+        rmse(i,j) = sqrt(mean(dHS.^2));
+        nrmse(i,j) = sqrt(mean(dHS.^2)/meanAlt(i,j).^2);
+        scatIn(i,j) = rmse(i,j)/meanAlt(i,j);      
+    end
 end

@@ -83,14 +83,7 @@ path(codePath, path); %add code path to search path
 % mean everything in each bin or cube. This I call the box method. The box
 % method, is currently about 10 times faster for gridded model data.
 
-switch options.averagingMethod
-    case 1
-        averagingMethod = 'box';
-    case 2
-        averagingMethod = 'bubble';
-    case 3
-        averagingMethod = 'none';
-end
+averagingMethod = options.averagingMethod;
 
 %% parameters for data averaging
 
@@ -127,9 +120,8 @@ for fileNum=1:length(mdFileList)
     
     try
         mdCol.lat = ncread([mdPath mdFileList(fileNum).name], 'latitude');
-    catch 
+    catch SACSfile
         mdCol.lat = ncread([mdPath mdFileList(fileNum).name], 'lat');
-        SACSfile
     end
     mdCol.lat = double(mdCol.lat);
     try
@@ -424,16 +416,20 @@ pData.lat = LATobsCat;
 pData.time = TIMEobsCat;
 pData.altHs = HSobsCat;
 pData.mdHs = HSmdCat;
-pData.options = options;
-pData.options.paths.mdPath = mdPath;
-pData.options.paths.savePath = savePath;
-pData.options.paths.codePath = codePath;
-pData.options.paths.altPath = altPath;
+pData.meta.options = options;
+pData.meta.paths.mdPath = mdPath;
+pData.meta.paths.savePath = savePath;
+pData.meta.paths.codePath = codePath;
+pData.meta.paths.altPath = altPath;
+pData.meta.modelInfo.lon = mdCol.lon;
+pData.meta.modelInfo.lat = mdCol.lat;
+pData.meta.modelInfo.time = mdCol.time;
+pData.meta.modelInfo.gridStatus = mdCol.gridStatus;
 
 if ~strcmp(averagingMethod,'none')
     pData.altHsStd = HSobsStdCat;
     pData.altNoSam = HSobsNoSamCat;
 end
 if options.save
-    save(savePath,'pData','mdCol')
+    save(savePath,'pData')
 end

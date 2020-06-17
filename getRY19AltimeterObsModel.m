@@ -83,7 +83,7 @@ for i = 1:length(loadSatList)
                 
                 %ping the file to make sure its working
                 try
-                    info   = ncread(fileName);
+                    info   = ncinfo(fileName);
                 catch
                     disp(['error opening ' fileName])
                     continue
@@ -134,7 +134,7 @@ for i = 1:length(loadSatList)
                 
                 %ping the file to make sure its working
                 try
-                    info   = ncread(fileName);
+                    info   = ncinfo(fileName);
                 catch
                     disp(['error opening ' fileName])
                     continue
