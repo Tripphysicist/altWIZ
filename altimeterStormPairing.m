@@ -59,78 +59,128 @@ function [stormObs, stormI] = altimeterStormPairing(stormName,stormYear,codePath
 path(codePath, path); %add code path to search path
 
 
-
 %% parameters for data averaging
 
 maxTimeDiff = options.maxTimeDiff; % [days]
 maxDistance = options.maxDistance; % [km] radius
 
-%% load Storm data
-try
-    stormData = getStormTrack(stormYear,stormName);
-catch
-    disp(['couldn''t find ' stormName ', try all capital letters']);
-end
-%% subsample
-stormData.lon(stormData.lon<0) = stormData.lon(stormData.lon<0) + 360; %0 - 360
-%interpolate to maxTimeDifference
-fields = fieldnames(stormData);
-oneIndex = find(stormData.index == 1);
-for i = 1:length(fields)
-    stormI.(fields{i}) = [];
+%% load Single Storm data or single year data
+if numel(stormYear) == 1
+    try
+        stormData = getStormTrackTCOBS(stormYear,stormName);
+        disp(['in TC-OBS database']);
+    catch
+        disp(['couldn''t find ' stormName ', in TC-OBS database trying IBTrACS']);
+        try
+            stormData = getStormTrackIBTrACS(stormYear,stormName);
+            disp(['in IBTrACS database']);
+        catch
+            disp(['couldn''t find ' stormName ', in IBTrACS either'...
+                ' maybe try all upper case']);
+        end
+    end
+    
+    
+    %% special case of all altimeter data
+    % I want to take TCOBS data when possible, but fill in the rest with
+    % IBTrACS because it covers a longer time period. Of the area of
+    % crossover, there is one storm in IBTrACS that is not in TCOBS -
+    % Barbara (the first storm in 2013), most likely because it was a Pacific Basin Storm. Becuase we
+    % are not currently considering Pacific storms, we simply remove
+    % Barbara (entry 439 when considering 1985+ data), this is semi-hard coded
+    % at the moment, should improve this implementation in the future
+elseif numel(stormYear) == 36 & stormYear(1) == 1985 & strcmp(stormName,'all')
+    disp('!! special case looking at all atlimeter data !!')
+    stormDataIB = getStormTrackIBTrACS(stormYear,stormName);
+    stormDataTC = getStormTrackTCOBS(stormYear,stormName);
+    % fields = fieldnames(stormDataIB);
+    [index13, ~] = find(vertcat(stormDataIB(:).year)==2013);
+    stormData=[stormDataIB(1:index13(1)-1) stormDataIB(index13(1)+1:end)];
+    [index89, ~] = find(vertcat(stormDataIB(:).year)==1989);
+    stormData(index89(1):index89(1)+numel(stormDataTC)-1)=stormDataTC;
 end
 
-if length(oneIndex) == 1
-    currentIndex = (1:length(stormData.time));
-    originalTime = stormData.time(currentIndex);
-    subsampleTime = originalTime(1):maxTimeDiff:originalTime(end);
-    for j = 1:length(fields)
-        temp = interp1(originalTime, stormData.(fields{j})(currentIndex), subsampleTime);
-        stormI.(fields{j}) = [stormI.(fields{j}) temp];
-    end
-    stormI.stormCount = ones(1,length(temp));
-    
-else
-    stormCount = 0;
-    stormI.stormCount = [];
-    for i = 1:length(oneIndex)
-        if i < length(oneIndex)
-            currentIndex = (oneIndex(i):oneIndex(i+1)-1);
-        else
-            currentIndex = (oneIndex(i):length(stormData.time));
+%% reshape HURDAT2 data
+% no longer using HURDAT2
+% count = 0;
+% fields = fieldnames(stormData);
+% for i =1:length(stormData.time)
+%     if stormData.index(i) == 1
+%         count = count + 1;
+%     end
+%     for jj = 1:numel(fields)
+%     stormData2(count).(fields{jj})(stormData.index(i)) = stormData.(fields{jj})(i);
+%     end
+% end
+
+
+%% subsample
+%
+%interpolate to maxTimeDifference into a new structure stormI
+fields = fieldnames(stormData);
+for ii=1:numel(stormData)
+    stormData(ii).lon(stormData(ii).lon<0) = stormData(ii).lon(stormData(ii).lon<0) + 360; %0 - 360
+    originalTime = stormData(ii).time;
+    subsampleTime = originalTime(1):maxTimeDiff*2:originalTime(end);
+    if numel(originalTime) == numel(subsampleTime)
+        for j = 1:length(fields)
+            stormI(ii).(fields{j}) = stormData(ii).(fields{j});
         end
-        if length(currentIndex) == 1
+        continue
+    end
+    for j = 1:length(fields)
+        if strcmp((fields{j}),'year') | strcmp((fields{j}),'name')
+            stormI(ii).(fields{j}) = stormData(ii).(fields{j});
             continue
         end
-        originalTime = stormData.time(currentIndex);
-        subsampleTime = originalTime(1):maxTimeDiff:originalTime(end);
-        for j = 1:length(fields)
-            temp = interp1(originalTime, stormData.(fields{j})(currentIndex), subsampleTime);
-            stormI.(fields{j}) = [stormI.(fields{j}) temp];
+        if sum(isnan(stormData(ii).(fields{j}))) == length(stormData(ii).(fields{j})) %no information to interp
+            stormI(ii).(fields{j}) = NaN(1,length(subsampleTime));
+        else
+            % switched this from interp1 to interp1gap (file exchange), to handle NaNs, max gap 6 hours
+            if strcmp((fields{j}),'dir') %handling directional data interp
+                cosTemp  = cosd(stormData(ii).(fields{j}));
+                sinTemp  = sind(stormData(ii).(fields{j}));
+                cosTempI = interp1gap(originalTime, cosTemp, subsampleTime,.5);
+                sinTempI = interp1gap(originalTime, sinTemp, subsampleTime,.5);
+                stormI(ii).(fields{j}) = mod((180/pi)*atan2(sinTempI,cosTempI),360);
+                clear cosTemp sinTemp cosTempi sinTempi
+            else
+                stormI(ii).(fields{j}) = interp1gap(originalTime, stormData(ii).(fields{j}), subsampleTime,.5);
+            end
         end
-        stormCount = stormCount + 1;
-        stormI.stormCount = [stormI.stormCount ones(1,length(temp)).*stormCount];
     end
 end
 
-%% load altimeter data, using the Ribal and Young database
+% make sure all are vectors are oriented the same way
+for i =1:numel(stormI)
+    [~, m] = size(stormI(i).time);
+    if m ~= 1
+        for j = 1:length(fields)
+            if strcmp((fields{j}),'year') | strcmp((fields{j}),'name')
+                continue
+            end
+            stormI(i).(fields{j}) = transpose(stormI(i).(fields{j}));
+        end
+    end
+end
 
-for i=1:max(stormI.stormCount)
-    index = find(stormI.stormCount == i);
+%%
+count = 0;
+for i=1:length(stormI)
     clear loadSatList
-    %use model time range to exclude some satellite missions
+    % use storm time range to exclude some satellite missions
     if i == 1
         switch options.altDatabase
             case 'RY19'
-                [loadSatList, satList] = defineSatListRY19(stormI.time(index),altPath);
+                [loadSatList, satList] = defineSatListRY19(stormI(i).time,altPath);
             case 'ESA'
-                loadSatList = defineSatListESA(stormI.time(indeX),altPath);
+                [loadSatList, satList] = defineSatListESA(stormI(i).time,altPath);
         end
     else
         satListLength = 0;
         for j = 1:length(satList)
             satSpan = floor(satList(j).timeStart):ceil(satList(j).timeEnd);
-            mdSpan  = floor(min(stormI.time(index))):ceil(max(stormI.time(index)));
+            mdSpan  = floor(min(stormI(i).time)):ceil(max(stormI(i).time));
             if  intersect(satSpan,mdSpan)
                 satListLength = satListLength +1;
                 loadSatList(satListLength) = satList(j);
@@ -142,28 +192,26 @@ for i=1:max(stormI.stormCount)
     end
     
     if isempty(loadSatList)
-        disp(['no data in database for ' stormName ' from ' num2str(stormI.time(index(1)))...
-            ' to ' num2str(stormI.time(index(end)))]);
+        disp(['no satellites during ' stormI(i).name ' ' num2str(stormI(i).year)]);
         continue
     end
-    
     
     % use model lat - lon to narrow down to files loaded, and load data from
     % local netCDF files
     
     switch options.altDatabase
         case 'RY19'
-            obs = getRY19AltimeterObsBuoy(loadSatList, stormI.lat(index), stormI.lon(index), altPath, options.QC);
+            obs = getRY19AltimeterObsBuoy(loadSatList, stormI(i).lat, stormI(i).lon, altPath, options.QC);
         case 'ESA'
-            obs = getESAAltimeterObs(loadSatList, stormI.time(index), altPath, options.QC);
+            obs = getESAAltimeterObs(loadSatList, stormI(i).time, altPath, options.QC);
     end
     
     % if there are no obs, skip this loop
     if isempty(obs)
-        disp(['no altimeter observations for storm ' num2str(i)]);
+        disp(['no altimeter observations for storm ' stormI(i).name ' ' num2str(stormI(i).year)]);
         continue
     else
-        disp('raw altimeter observations exist')
+        disp(['altimeter observations exist for ' stormI(i).name ' ' num2str(stormI(i).year)])
     end
     
     
@@ -176,20 +224,20 @@ for i=1:max(stormI.stormCount)
     LATobs  = vertcat(obs(:).lat);
     TIMEobs = vertcat(obs(:).time);
     HSobs   = vertcat(obs(:).hs);
+    WINDobs   = vertcat(obs(:).wind);
     % HSERobs   = vertcat(obs(:).hsEr); % error estimate
     % HSQCobs   = vertcat(obs(:).hsQC); % QC flag
     % SATIDobsNA = vertcat(obs(:).satID)); % Satellite Mission ID
-    %WIND
-    % WINDobs = vertcat(obs(:).wind);
-    
-    for idx = 1:length(index)
-        distance = latlon2dist(LATobs,LONobs,stormI.lat(index(idx)),stormI.lon(index(idx)));
+    for idx = 1:length(stormI(i).time)
+        distance = latlon2dist(LATobs,LONobs,stormI(i).lat(idx),stormI(i).lon(idx));
         [nearStormIndex , ~] = find(distance <= maxDistance &...
-            abs(stormI.time(index(idx)) - TIMEobs) <= maxTimeDiff/2);
-        stormObs(index(idx)).lat   = LATobs(nearStormIndex);
-        stormObs(index(idx)).lon   = LONobs(nearStormIndex);
-        stormObs(index(idx)).time  = TIMEobs(nearStormIndex);
-        stormObs(index(idx)).hs    = HSobs(nearStormIndex);
+            abs(stormI(i).time(idx) - TIMEobs) <= maxTimeDiff/2);
+        count = count + 1;
+        stormObs(count).lat   = LATobs(nearStormIndex);
+        stormObs(count).lon   = LONobs(nearStormIndex);
+        stormObs(count).time  = TIMEobs(nearStormIndex);
+        stormObs(count).hs    = HSobs(nearStormIndex);
+        stormObs(count).wind  = WINDobs(nearStormIndex);
         
         %         plot(stormObs(count).time,stormObs(count).altHs,'.')
         %         hold on
@@ -197,21 +245,10 @@ for i=1:max(stormI.stormCount)
         %         shg
         %         datetick('x')
     end
+    %interpolat storm information to each pass
 end
 
-% for i = 1:length(stormObs)
-%     if isempty(stormObs(i).hs)
-%         continue
-%     end
-%     [stormObs(i).xDistance, stormObs(i).yDistance, stormObs(i).distance2center] = latlon2xy(stormObs(i).lat,stormObs(i).lon,stormI.lat(i),stormI.lon(i));
-%     stormObs(i).altAngle =  deg360(90 - (180/pi).*atan2(stormObs(i).yDistance,stormObs(i).xDistance));
-%     stormObs(i).stormRefAngle = deg360(270-(stormObs(i).altAngle + stormI.dir(i)));
-% end
-%%
-%%
-%WIND
-%WINDobsNA = WINDobsNA(obsIndx);
-
+%pair data / interpolate
 
 % get rid of NaNs
 
@@ -220,9 +257,14 @@ end
 % stormObs.lon = stormObs.lon(indNaNobs);
 % stormObs.time = stormObs.time(indNaNobs);
 % stormObs.hs = stormObs.hs(indNaNobs);
+% stormObs.wind = stormObs.wind(indNaNobs);
 
 % stormObs.options = options;
-
+disp('great success!')
 if options.save
-    save(savePath,'stormObs','stormI','options')
+    try
+        save(savePath,'stormObs','stormI','options')
+    catch
+        save(stormData,'stormObs','stormI','options')
+    end
 end
