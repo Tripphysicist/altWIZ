@@ -58,7 +58,7 @@ for i = 1:lonLength;
                     for k = 1:timeLength;
                         currentDataBin = obsHs(lonBinidx == i & latBinidx == j & timeBinidx == k);
                         if length(currentDataBin) >= minNumberObs
-                            meanHsByBin(i,j,k) = nanmean(currentDataBin);
+                            meanHsByBin(i,j,k) = mean(currentDataBin,'omitnan');
                         end
                         %            stdHsByBin(i,j,k)  = nanstd(currentDataBin); Any other
                         %            function
