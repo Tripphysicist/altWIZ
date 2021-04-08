@@ -12,6 +12,7 @@ function obs = getRY19AltimeterObsBuoy(loadSatList, buoyLat, buoyLon, altPath, Q
 %  obs.lat - latitude in degrees
 %  obs.time - time (MATLAB datenum)
 %  obs.hs - calibrated as detailed in RY19
+%  obs.wind - wind 
 %  obs.hsEr - the standard deviation of the hs raw data
 %  obs.hsQC - flags: In the present database, a series of data flags defined as 1, 2,
 %             3, 4, and 9 represent Good_data, Probably_good_data, SAR-mode data or
