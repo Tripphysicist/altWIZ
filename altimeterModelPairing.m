@@ -4,7 +4,7 @@ function [pData] = altimeterModelPairing(codePath,mdPath,altPath,savePath,option
 % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 % % Script to compare wave model output to altimeter measurements of .    % 
 % % significant wave height .                                             %
-% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+% % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%open %%%%%%%%%%%%%%%%%%% %
 %
 %  OUTPUT
 %  pData - structure of wave height data from altimeter and models with
@@ -106,10 +106,10 @@ HSobsCat      = [];
 HSobsStdCat   = [];
 HSobsNoSamCat = [];
 HSmdCat       = [];
-
-%WIND
-% UmdCat = [];
-% VmdCat = [];
+WINDobsCat      = [];
+WINDobsStdCat   = [];
+WINDobsNoSamCat = [];
+WINDmdCat       = [];
 
 loopCount = 0;
 for fileNum=1:length(mdFileList)
@@ -139,6 +139,7 @@ for fileNum=1:length(mdFileList)
     catch
         mdCol.hs = ncread([mdPath mdFileList(fileNum).name], 'waveHs');
     end
+    mdCol.hs(mdCol.hs<0) = NaN;
     try
         mdCol.gridStatus = ncread([mdPath mdFileList(fileNum).name], 'MAPSTA');
     catch
@@ -153,12 +154,12 @@ for fileNum=1:length(mdFileList)
         mdCol.time = ncread([mdPath mdFileList(fileNum).name], 'time') + datenum([1990 01 01 00 00 00]);
     end
     
-    %WIND
-    %calculate wind from u and v components
-    % uwnd = ncread([mdPath 'ww3.201010.nc'], 'uwnd');
-    % vwnd = ncread([mdPath 'ww3.201010.nc'], 'vwnd');
-    % mdCol.wind = sqrt(uwnd.^2 + vwnd.^2);
-    
+    %WIND 
+    try
+        uwnd = ncread([mdPath mdFileList(fileNum).name], 'uwnd');
+        vwnd = ncread([mdPath mdFileList(fileNum).name], 'vwnd');
+        mdCol.wind = sqrt(uwnd.^2 + vwnd.^2);
+    end
     
     %% reduce the model domain so it can run on my desktop
     
@@ -169,7 +170,6 @@ for fileNum=1:length(mdFileList)
     
     lonIndexLength = round(lonLength/loopSize);
     latIndexLength = round(latLength/loopSize);
-    
     
     %loop over each grid chunk
     for bigLoopLon = 1:loopSize
@@ -210,6 +210,7 @@ for fileNum=1:length(mdFileList)
             timeInd = 1:length(mdCol.time);
             mdTest.time = mdCol.time(timeInd);
             mdTest.hs   = mdCol.hs(lonInd,latInd,timeInd);
+            mdTest.wind   = mdCol.wind(lonInd,latInd,timeInd);
             mdTest.gridStatus = mdCol.gridStatus(lonInd,latInd);
             
             %if the grid status indicates no active points, skip this loop
@@ -277,7 +278,7 @@ for fileNum=1:length(mdFileList)
             % HSQCobs   = vertcat(obs(:).hsQC); % QC flag
             % SATIDobsNA = vertcat(obs(:).satID)); % Satellite Mission ID
             %WIND
-            % WINDobsNA = vertcat(obs(:).wind);
+            WINDobsNA = vertcat(obs(:).wind);
             
             % NEED TO CHECK LON for consistency (180 or 360)
             [obsIndx , ~] = find(TIMEobsNA >= min(mdTest.time) - maxTimeDiff...
@@ -291,6 +292,7 @@ for fileNum=1:length(mdFileList)
             LATobsNA  = LATobsNA(obsIndx);
             TIMEobsNA = TIMEobsNA(obsIndx);
             HSobsNA   = HSobsNA(obsIndx);
+            WINDobsNA = WINDobsNA(obsIndx);
             
             if isempty(HSobsNA)
                 disp(['no altimeter observations during querry time, for loop '...
@@ -300,24 +302,23 @@ for fileNum=1:length(mdFileList)
                 %                disp('raw altimeter observations exist')
             end
             
-            
-            %WIND
-            %WINDobsNA = WINDobsNA(obsIndx);
-            
+                  
             %% Reduce data by averaging over space and time
             switch averagingMethod
                 case 'bubble'
-                    [LONobs , LATobs , TIMEobs , HSobs , HSobsStd , HSobsNoSam] = ...
+                    [LONobs , LATobs , TIMEobs , HSobs , HSobsStd , HSobsNoSam,...
+                        WINDobs, WINDobsStd, WINDobsNoSam] = ...
                         bubbleMethod(LONobsNA, LATobsNA, TIMEobsNA,...
-                        HSobsNA, mdTest.lon, mdTest.lat, mdTest.time,...
+                        HSobsNA, WINDobsNA, mdTest.lon, mdTest.lat, mdTest.time,...
                         maxDistance, maxTimeDiff, mdTest.gridStatus,...
                         minNumberObs);
                 case 'box'
                     % This creates a gridded cube with demsions lat, lon, & time and
                     % the average in each of those cubes. It takes too long (added 30 minutes
                     % to a 2 x 2 degree grid (from like 30 seconds).
-                    [LONobs , LATobs , TIMEobs , HSobs , HSobsStd , HSobsNoSam] = ...
-                        boxMethod(LONobsNA, LATobsNA, TIMEobsNA, HSobsNA,...
+                    [LONobs , LATobs , TIMEobs , HSobs , HSobsStd , HSobsNoSam,...
+                        WINDobs, WINDobsStd, WINDobsNoSam] = ...
+                        boxMethod(LONobsNA, LATobsNA, TIMEobsNA, HSobsNA, WINDobsNA,...
                         mdTest.lon, mdTest.lat, maxTimeDiff, mdTest.gridStatus,...
                         minNumberObs);
                     
@@ -327,8 +328,9 @@ for fileNum=1:length(mdFileList)
                     LATobs  = LATobsNA;
                     TIMEobs = TIMEobsNA;
                     HSobs   = HSobsNA;
+                    WINDobs = WINDobsNA;
                     
-                    clear LONobsNA LATobsNA TIMEobsNA HSobsNA
+                    clear LONobsNA LATobsNA TIMEobsNA HSobsNA WINDobsNA
                     
             end
             
@@ -343,12 +345,21 @@ for fileNum=1:length(mdFileList)
                 lonOffset = abs(min(mdTest.lonO));
                 mdNewLon = double(mdTest.lonO + lonOffset);
                 [LONmd , LATmd , TIMEmd] = ndgrid(mdNewLon,mdTest.lat,mdTest.time);
-                Fmodel = scatteredInterpolant(double(LONmd(:)), double(LATmd(:))...
+                FmodelHS = scatteredInterpolant(double(LONmd(:)), double(LATmd(:))...
                     , TIMEmd(:), mdTest.hs(:),'linear','none'); % can't run on full domain
-                obsNewLon = double(deg180(LONobs) + lonOffset);
-                HSmd = Fmodel(obsNewLon, LATobs, TIMEobs);
+                obsNewLon = mod(LONobs,360);
+                obsNewLon(obsNewLon>180)= obsNewLon(obsNewLon>180)-360;
+                obsNewLon = double(obsNewLon + lonOffset);
+                HSmd = FmodelHS(obsNewLon, LATobs, TIMEobs);
                 indNaN = ~isnan(HSmd);
                 HSmd = HSmd(indNaN);
+                if options.runWindEval == 1
+                    FmodelWIND = scatteredInterpolant(double(LONmd(:)), double(LATmd(:))...
+                        , TIMEmd(:), mdTest.wind(:),'linear','none'); % can't run on full domain
+                    WINDmd = FmodelWIND(obsNewLon, LATobs, TIMEobs);
+                    indNaN = ~isnan(WINDmd);
+                    WINDmd = WINDmd(indNaN);
+                end
                 
             else
                 [LONmd , LATmd , TIMEmd] = ndgrid(mdTest.lon,mdTest.lat,mdTest.time);
@@ -357,10 +368,17 @@ for fileNum=1:length(mdFileList)
                 HSmd = Fmodel(LONobs, LATobs, TIMEobs);
                 indNaN = ~isnan(HSmd);
                 HSmd = HSmd(indNaN);
-                
+                if options.runWindEval == 1
+                    FmodelWIND = scatteredInterpolant(double(LONmd(:)), double(LATmd(:))...
+                        , TIMEmd(:), mdTest.wind(:),'linear','none'); % can't run on full domain
+                    WINDmd = FmodelWIND(LONobs, LATobs, TIMEobs);
+                    indNaN = ~isnan(WINDmd);
+                    WINDmd = WINDmd(indNaN);
+                end
             end
             %%
             HSobs  = HSobs(indNaN);
+            WINDobs = WINDobs(indNaN);
             
             if length(HSmd) ~= length(HSobs)
                 disp('Error: model length does not match observations');
@@ -372,12 +390,16 @@ for fileNum=1:length(mdFileList)
             if ~strcmp(averagingMethod,'none')
                 HSobsStd = HSobsStd(indNaN);
                 HSobsNoSam = HSobsNoSam(indNaN);
+                WINDobsStd = WINDobsStd(indNaN);
+                WINDobsNoSam = WINDobsNoSam(indNaN);
                 disp([num2str(length(HSobsNA)) ' raw altimeter measurments have'...
                     ' been reduced to ' num2str(length(HSobs)) ' averages ']);
             else
                 indNaNobs = ~isnan(HSobs);
                 HSmd = HSmd(indNaNobs);
                 HSobs = HSobs(indNaNobs);
+                WINDmd = WINDmd(indNaNobs);
+                WINDobs = WINDobs(indNaNobs);
                 LONobs = LONobs(indNaNobs);
                 LATobs = LATobs(indNaNobs);
                 TIMEobs = TIMEobs(indNaNobs);
@@ -390,22 +412,28 @@ for fileNum=1:length(mdFileList)
             end
             %% save the matched pairs, clear data and loop through the whole domain
             
-            clearvars -except TIMEobs LONobs LATobs HSobs HSmd TIMEobsCat...
-                LONobsCat LATobsCat HSobsCat HSmdCat mdCol bigLoopLat...
+            clearvars -except TIMEobs LONobs LATobs HSobs HSmd WINDobs WINDmd TIMEobsCat...
+                LONobsCat LATobsCat HSobsCat HSmdCat WINDobsCat WINDmdCat mdCol bigLoopLat...
                 bigLoopLon averagingMethod mdPath mdFileList loopSize...
                 lonLength latLength lonIndexLength latIndexLength fileNum...
                 mdPath altPath codePath glyph loopCount maxTimeDiff...
                 maxDistance minNumberObs loopCount savePath HSobsStd HSobsStdCat...
-                HSobsNoSam HSobsNoSamCat options
+                HSobsNoSam HSobsNoSamCat WINDobsStd WINDobsStdCat WINDobsNoSam ...
+                WINDobsNoSamCat options
             
             TIMEobsCat = [TIMEobsCat; TIMEobs];
             LONobsCat  = [LONobsCat; LONobs];
             LATobsCat  = [LATobsCat; LATobs];
             HSobsCat   = [HSobsCat; HSobs];
             HSmdCat    = [HSmdCat; HSmd];
+            WINDobsCat = [WINDobsCat; WINDobs];
+            WINDmdCat  = [WINDmdCat; WINDmd];
+            
             if ~strcmp(averagingMethod,'none')
                 HSobsStdCat   = [HSobsStdCat; HSobsStd];
                 HSobsNoSamCat   = [HSobsNoSamCat; HSobsNoSam];
+                WINDobsStdCat   = [WINDobsStdCat; WINDobsStd];
+                WINDobsNoSamCat   = [WINDobsNoSamCat; WINDobsNoSam];
             end
         end
     end
@@ -415,7 +443,9 @@ pData.lon = LONobsCat;
 pData.lat = LATobsCat;
 pData.time = TIMEobsCat;
 pData.altHs = HSobsCat;
+pData.altWind = WINDobsCat;
 pData.mdHs = HSmdCat;
+pData.mdWind = WINDmdCat;
 pData.meta.options = options;
 pData.meta.paths.mdPath = mdPath;
 pData.meta.paths.savePath = savePath;
@@ -428,8 +458,11 @@ pData.meta.modelInfo.gridStatus = mdCol.gridStatus;
 
 if ~strcmp(averagingMethod,'none')
     pData.altHsStd = HSobsStdCat;
-    pData.altNoSam = HSobsNoSamCat;
+    pData.altHsNoSam = HSobsNoSamCat;    
+    pData.altWindStd = WINDobsStdCat;
+    pData.altWindNoSam = WINDobsNoSamCat;    
 end
+
 if options.save
     save(savePath,'pData')
 end
