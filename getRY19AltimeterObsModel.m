@@ -11,6 +11,7 @@ function obs = getRY19AltimeterObsModel(loadSatList, mdLat, mdLon, mdLonO, altPa
 %  obs.lon - longitude in degrees
 %  obs.lat - latitude in degrees
 %  obs.time - time (MATLAB datenum)
+%  obs.wind - wind speed
 %  obs.hs - calibrated as detailed in RY19
 %  obs.hsEr - the standard deviation of the hs raw data
 %  obs.hsQC - flags: In the present database, a series of data flags defined as 1, 2,
@@ -40,8 +41,8 @@ function obs = getRY19AltimeterObsModel(loadSatList, mdLat, mdLon, mdLonO, altPa
 % % updates:                                                              %
 % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 % references:
-% Ribal, A. and Young, I.R., 2019. 33 years of globally calibrated wave 
-% height and wind speed data based on altimeter observations. Scientific 
+% Ribal, A. and Young, I.R., 2019. 33 years of globally calibrated wave
+% height and wind speed data based on altimeter observations. Scientific
 % data, 6(1), pp.1-15.
 % https://doi.org/10.1038/s41597-019-0083-9
 
@@ -119,7 +120,7 @@ for i = 1:length(loadSatList)
                 
                 %WIND
                 %             obs(count2).wind    = ncread(fileName, 'WSPD');
-                %             obs(count2).windCal = ncread(fileName, 'WSPD_CAL');
+                obs(count2).wind = ncread(fileName, 'WSPD_CAL');
                 
                 
             end
@@ -128,7 +129,7 @@ for i = 1:length(loadSatList)
                     altEast + 1 >= mdLon(1) & altEast  <= mdLon(end)
                 
                 fileName = [altFilePath altFileList(j).name];
-
+                
                 count2 = count2 + 1;
                 
                 
@@ -168,7 +169,7 @@ for i = 1:length(loadSatList)
                     %                 obs(count2).hsEr = ncread(fileName, 'SWH_KU_std_dev');
                 end
                 %WIND
-                %             obs(count2).wind = ncread(fileName, 'WSPD_CAL');
+                obs(count2).wind = ncread(fileName, 'WSPD_CAL');
                 
                 
             end
@@ -204,6 +205,6 @@ for i = 1:length(obs)
     %    obs(i).satID = obs(i).satID(qcPassInd);
     
     %WIND
-    % obs(i).wind = obs(i).wind(qcPassInd );
+    obs(i).wind = obs(i).wind(qcPassInd );
     
 end
