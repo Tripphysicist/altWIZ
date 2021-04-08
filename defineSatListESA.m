@@ -1,4 +1,4 @@
-function loadSatList = defineSatListESA(buoyTime,altPath)
+function [loadSatList, satList] = defineSatListESA(buoyTime,altPath)
 % loadSatList = defineSatListESA(buoyTime,altPath)
 %
 % Altimeter	  Freq.-Band Latitude-coverage Initial-Date Final-Date
