@@ -1,4 +1,4 @@
-function [LONobs LATobs TIMEobs HSobs HSobsStd HSobsNoSam] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat, maxTimeDiff, gridStatus, minNumberObs) 
+function [LONobs LATobs TIMEobs HSobs HSobsStd HSobsNoSam WINDobs WINDobsStd WINDobsNoSam] = boxMethod(obsLon, obsLat, obsTime, obsHs, obsWind, gridLon, gridLat, maxTimeDiff, gridStatus, minNumberObs) 
 % [LONobs LATobs TIMEobs HSobs HSobsStd HSobsNoSam] = boxMethod(obsLon, obsLat, obsTime, obsHs, gridLon, gridLat,maxTimeDiff,gridStatus,minNumberObs) 
 %
 % %for debugging
@@ -68,6 +68,9 @@ timeLength = length(timeBinCenter);
 meanHsByBin = NaN(lonLength,latLength,timeLength);
 stdHsByBin =  NaN(lonLength,latLength,timeLength);
 noSamHsByBin = NaN(lonLength,latLength,timeLength);
+meanWindByBin = NaN(lonLength,latLength,timeLength);
+stdWindByBin =  NaN(lonLength,latLength,timeLength);
+noSamWindByBin = NaN(lonLength,latLength,timeLength);
 % nearestHsByBin = NaN(lonLength,latLength,timeLength);
 
 %loop through each dimension to average each cubic bin
@@ -78,12 +81,15 @@ for i = 1:lonLength;
             if sum(gridLat == latBinCenter(j))
                 if gridStatus(find(gridLon==lonBinCenter(i)),find(gridLat==latBinCenter(j)))==1 %check grid status
                     for k = 1:timeLength;
-                        currentDataBin = obsHs(lonBinidx == i & latBinidx == j & timeBinidx == k);
-                        if length(currentDataBin) >= minNumberObs
-                            meanHsByBin(i,j,k) = nanmean(currentDataBin);
-                            stdHsByBin(i,j,k)  = nanstd(currentDataBin);
-                            noSamHsByBin(i,j,k) = length(currentDataBin);
-                            % nearestHsByBin = ? 
+                        currentHsDataBin = obsHs(lonBinidx == i & latBinidx == j & timeBinidx == k);
+                        currentWindDataBin = obsWind(lonBinidx == i & latBinidx == j & timeBinidx == k);
+                        if length(currentHsDataBin) >= minNumberObs
+                            meanHsByBin(i,j,k) = mean(currentHsDataBin,'omitnan');
+                            stdHsByBin(i,j,k)  = std(currentHsDataBin,'omitnan');
+                            noSamHsByBin(i,j,k) = length(currentHsDataBin);
+                            meanWindByBin(i,j,k) = mean(currentWindDataBin,'omitnan');
+                            stdWindByBin(i,j,k)  = std(currentWindDataBin,'omitnan');
+                            noSamWindByBin(i,j,k) = length(currentWindDataBin);                            
                         end
                     end
                 end
@@ -95,6 +101,9 @@ end
 meanHsByBin = meanHsByBin(:);
 stdHsByBin = stdHsByBin(:);
 noSamHsByBin = noSamHsByBin(:);
+meanWindByBin = meanWindByBin(:);
+stdWindByBin = stdWindByBin(:);
+noSamWindByBin = noSamWindByBin(:);
 
 
 indNaN = ~isnan(meanHsByBin);
@@ -102,6 +111,9 @@ indNaN = ~isnan(meanHsByBin);
 HSobs        = meanHsByBin(indNaN);
 HSobsStd     = stdHsByBin(indNaN);
 HSobsNoSam   = noSamHsByBin(indNaN);
+WINDobs        = meanWindByBin(indNaN);
+WINDobsStd     = stdWindByBin(indNaN);
+WINDobsNoSam   = noSamWindByBin(indNaN);
 
 [LON, LAT, TIME] = ndgrid(lonBinCenter,latBinCenter,timeBinCenter);
 
