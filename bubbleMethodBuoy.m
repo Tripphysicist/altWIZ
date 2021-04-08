@@ -23,27 +23,18 @@ nearestWind = NaN(buoyTimeLength,1);
 % tic
 % debugCount = 0;
 tic
-R = 6371; % Earth's radius in km
-lat1=obsLat*pi/180;
-lon1=obsLon*pi/180;
 
 for i = 1:buoyTimeLength
     %    [xdummy,ydummy,distance]=latlon2xy(obsLat,obsLon,buoyLat(i),buoyLon(i));
-    lat2=buoyLat(i)*pi/180;
-    lon2=buoyLon(i)*pi/180;
-    deltaLat=lat2-lat1;
-    deltaLon=lon2-lon1;
-    a=sin((deltaLat)/2).^2 + cos(lat1).*cos(lat2) .* sin(deltaLon/2).^2;
-    c=2*atan2(sqrt(a),sqrt(1-a));
-    distance = R.*c;    %Haversine distance    
+    distance = latlon2dist(obsLat,obsLon,buoyLat(i),buoyLon(i));
     [meanIndex , ~] = find(distance<=maxDistance &  abs(buoyTime(i) - obsTime) <= maxTimeDiff);
     if length(meanIndex) >= minNumberObs
         currentHsData = obsHs(meanIndex);
-        meanHsByDistance(i) = nanmean(currentHsData);
-        stdHsByDistance(i) = nanstd(currentHsData);        
+        meanHsByDistance(i) = mean(currentHsData,'omitnan');
+        stdHsByDistance(i) = std(currentHsData,'omitnan');        
         currentWindData = obsWind(meanIndex);
-        meanWindByDistance(i) = nanmean(currentWindData);
-        stdWindByDistance(i) = nanstd(currentWindData);
+        meanWindByDistance(i) = mean(currentWindData,'omitnan');
+        stdWindByDistance(i) = std(currentWindData,'omitnan');
         %         debugCount = debugCount +1
         currentDistance = distance(meanIndex);
         [~ , sortIndex] = sort(currentDistance);
