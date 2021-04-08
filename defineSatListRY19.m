@@ -17,18 +17,18 @@ function [loadSatList, satList] = defineSatListRY19(buoyTime,altPath)
 % SENTINEL-3A Ku C	     -78 to 81	       01/03/2016	Ongoing
 
 %what to do with altimeters with 2 bands?
-[glyph baseDir] = giveGlyph;
+[glyph, ~] = giveGlyph;
 
 satList  = dir(altPath);
 satList = rmfield (satList,{'date','bytes','isdir','datenum'});
 satList = satList(3:end);
-
+satList = dealWithDS(satList);
 for i = 1:length(satList)
     satFileList = dir([altPath satList(i).name]);
     satFileList = rmfield (satFileList,{'date','bytes','isdir','datenum'});
     satFileList = satFileList(3:end);
-    info = ncinfo([altPath satList(i).name glyph satFileList(1).name]);
-    %    timeOffsetMeta(i) = info.Variables(1).Attributes(3);
+    % info = ncinfo([altPath satList(i).name glyph satFileList(1).name]);
+    % timeOffsetMeta(i) = info.Variables(1).Attributes(3);
     altTime = ncread([altPath satList(i).name glyph satFileList(1).name],'TIME');
     satList(i).timeStart = altTime(1)+datenum([1985 01 01 00 00 00]);
     satList(i).timeEnd = altTime(end)+datenum([1985 01 01 00 00 00]);
@@ -45,6 +45,6 @@ for i = 1:length(satList)
         loadSatList(count1) = satList(i);
     end
 end
-if count1 == 0;
+if count1 == 0
     loadSatList = [];
 end
