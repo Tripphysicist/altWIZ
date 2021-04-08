@@ -84,115 +84,148 @@ path(codePath, path); %add code path to search path
 maxTimeDiff = options.maxTimeDiff;
 maxDistance = options.maxDistance;
 minNumberObs = options.minNumberObs;
+%%
+switch buoyInfo.source
+    case 'CDIP'
+        
+        % CDIP
+        cdipURL = ['http://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/archive/'...
+            buoyInfo.name 'p1/' buoyInfo.name 'p1_historic.nc'];
+        cdipTimeOffset = datenum([1970 01 01 00 00 00]);
+        cdipTime = double(ncread(cdipURL,'waveTime'))/(60*60*24) + cdipTimeOffset;
+        cdipHs = ncread(cdipURL,'waveHs');
+        cdipGPStime = double(ncread(cdipURL,'gpsTime'))/(60*60*24) + cdipTimeOffset;
+        cdipGPSlat = ncread(cdipURL,'gpsLatitude');
+        cdipGPSlon = ncread(cdipURL,'gpsLongitude');
+        cdipLat = interp1(cdipGPStime, cdipGPSlat, cdipTime);
+        cdipLon = interp1(cdipGPStime, cdipGPSlon, cdipTime) + 360; %0 - 360
+        cdipLat(1)= cdipLat(2); %interpolation made this a NaN
+        cdipLon(1)= cdipLon(2); %interpolation made this a NaN
+        
+        % remove fill values
+        [goodIndex, ~] = find(cdipHs>0);
+        buoyData.time = cdipTime(goodIndex);
+        buoyData.lon  = cdipLon(goodIndex);
+        buoyData.lat  = cdipLat(goodIndex);
+        buoyData.hs   = cdipHs(goodIndex);
+        %}
+                
+    case 'NDBC'
+        % grab hfile, I have processed hfiles here:
+        load('sData_v20200721.mat')
+        % this is from the NDBC website, which is considered the "official
+        % archive", however there is not meta-data, i.e. lon, lat, buoy
+        % hull, etc. One needs to supply this seperately for now, will make
+        % this functional in the future.
+        
+        for i = 1:length(sData)
+            currentFile = sData(i).hFile;
+            if isempty(currentFile)
+                continue
+            end
+            bIndex(i) = contains(currentFile,buoyInfo.name);
+        end
+        
+        Hs = vertcat(sData(bIndex).hHs);
+        windSpeed = vertcat(sData(bIndex).hWindSpeed);
+        time = vertcat(sData(bIndex).htime);
+        time = time(~isnan(Hs));
+        Hs = Hs(~isnan(Hs));
+        windSpeed = windSpeed(~isnan(Hs));
+        lon = buoyInfo.lon.*ones(length(Hs),1);
+        lat = buoyInfo.lat.*ones(length(Hs),1);
+        
+        buoyData.time = time;
+        buoyData.lon  = 360 + lon; %from negative W to E poisitive 0 - 360
+        buoyData.lat  = lat;
+        buoyData.hs   = Hs;
+        buoyData.windSpeed = windSpeed;
+                
+    case 'SIO'
+        
+        % SIO MINI BUOYS
+        load('/Users/tripp/D/Analysis/altimeterComparison/mini-buoys/AO_MWB.mat')
+        
+        time = [];
+        lon  = []; %from negative W to E poisitive 0 - 360
+        lat  = [];
+        Hs   = [];
+        
+        %concatenate data into one vector
+        fields = fieldnames(MWB);
+        for i = 1:length(fields)
+            time = [time; MWB.(fields{i}).time];
+            lon = [lon; MWB.(fields{i}).lon];
+            lat = [lat; MWB.(fields{i}).lat];
+            Hs = [Hs; MWB.(fields{i}).Hs];
+        end
+        
+        buoyData.time = time;
+        buoyData.lon  = 360 + lon; %from negative W to E poisitive 0 - 360
+        buoyData.lat  = lat;
+        buoyData.hs   = Hs;
+        
+    case '3DMG'
+        load('/Users/tripp/Google Drive/Work/Jensen Buoy Work/46029_analysis.mat',...
+            'MG','parMG');
 
-%% PAPA TEST (LOCAL FILE)
-%{
+        buoyData.time = MG.time; 
+        buoyData.lon = MG.lon + 360;
+        buoyData.lat = MG.lat;
+        buoyData.hs  = parMG.Hm0';
+        
+    case 'HIPPY'
+        
+        load('/Users/tripp/Google Drive/Work/Jensen Buoy Work/46029_analysis.mat',...
+            'HP','parHP');
 
-papaFile = 'D:\Datasets\Papa\166p1_historic.nc';
-papaInfo = ncinfo(papaFile);
-papaTimeOffset = datenum([1970 01 01 00 00 00]);
-papaTime = double(ncread(papaFile,'waveTime'))/(60*60*24) + papaTimeOffset;
-papaHs = ncread(papaFile,'waveHs');
-papaGPStime = double(ncread(papaFile,'gpsTime'))/(60*60*24) + papaTimeOffset;
-papaGPSlat = ncread(papaFile,'gpsLatitude');
-papaGPSlon = ncread(papaFile,'gpsLongitude');
-papaLat = interp1(papaGPStime, papaGPSlat, papaTime);
-papaLon = interp1(papaGPStime, papaGPSlon, papaTime) + 360;
-papaLat(1)= papaLat(2); %interpolation made this a NaN
-papaLon(1)= papaLon(2); %interpolation made this a NaN
+        buoyData.time = HP.time; 
+        buoyData.lon = HP.lon + 360;
+        buoyData.lat = HP.lat;
+        buoyData.hs  = parHP.Hm0';
+        
+    case 'WR'    
+        
+        load('/Users/tripp/Google Drive/Work/Jensen Buoy Work/46029_analysis.mat',...
+            'WR','parWR');
 
-buoyData.time = papaTime;
-buoyData.lon  = papaLon;
-buoyData.lat  = papaLat;
-buoyData.hs   = papaHs;
+        buoyData.time = WR.time; 
+        buoyData.lon = WR.lon + 360;
+        buoyData.lat = WR.lat;
+        buoyData.hs  = parWR.Hm0';
+        
+    case 'ITOP'
+        % ITOP
+        % EASI-N
+        % load([buoyPath 'EASI_Nv2.mat'])
+        % buoyData.time = EN.var.yday + datenum([2010 01 01 00 00 00]);
+        % buoyData.lon  =  126.968.*ones(length(buoyData.time),1);
+        % buoyData.lat  =  21.238.*ones(length(buoyData.time),1);
+        % buoyData.hs   = EN.par.int.Hm0;
+        % clear EN
+        
+        % EASI-S
+        % load([buoyPath 'EASI_Sv5.mat'])
+        % buoyData.time = ES.var.yday + datenum([2010 01 01 00 00 00]);
+        % buoyData.lon  =  127.258.*ones(length(buoyData.time),1);
+        % buoyData.lat  =  19.683.*ones(length(buoyData.time),1);
+        % buoyData.hs   = ES.par.int.Hm0;
+        % clear ES
+end
 
-%}
-%% CDIP
-%%{
-
-cdipURL = ['http://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/archive/'...
-    buoyInfo 'p1/' buoyInfo 'p1_historic.nc'];
-cdipTimeOffset = datenum([1970 01 01 00 00 00]);
-cdipTime = double(ncread(cdipURL,'waveTime'))/(60*60*24) + cdipTimeOffset;
-cdipHs = ncread(cdipURL,'waveHs');
-cdipGPStime = double(ncread(cdipURL,'gpsTime'))/(60*60*24) + cdipTimeOffset;
-cdipGPSlat = ncread(cdipURL,'gpsLatitude');
-cdipGPSlon = ncread(cdipURL,'gpsLongitude');
-cdipLat = interp1(cdipGPStime, cdipGPSlat, cdipTime);
-cdipLon = interp1(cdipGPStime, cdipGPSlon, cdipTime) + 360; %0 - 360
-cdipLat(1)= cdipLat(2); %interpolation made this a NaN
-cdipLon(1)= cdipLon(2); %interpolation made this a NaN
-
-% remove fill values
-
-
-buoyData.time = cdipTime;
-buoyData.lon  = cdipLon;
-buoyData.lat  = cdipLat;
-buoyData.hs   = cdipHs;
-%}
+%% test plot
 figure
 plot(buoyData.time,buoyData.hs,'.')
 datetick('x')
-
-%% NDBC
-% buoy = '46029';
-% buoy = '41048';
-% buoy = '46001';
-% buoy = '44011';
-% type = 'h';
-% load([baseDir 'Analysis' glyph 'Jensen Buoy Work' glyph 'test' glyph buoy glyph buoy type '.mat'])
-% buoyData.time = timeCat;
-% buoyData.lon  = lonCat;
-% buoyData.lat  = latCat;
-% buoyData.hs   = hsCat;
-% clear timeCat lonCat latCat hsCat
-
-%% SIO MINI BUOYS
-
-% load(buoyPath)
-%
-% time = [];
-% lon  = []; %from negative W to E poisitive 0 - 360
-% lat  = [];
-% Hs   = [];
-%
-% %concatenate data into one vector
-% fields = fieldnames(MWB);
-% for i = 1:length(fields)
-%     time = [time; MWB.(fields{i}).time];
-%     lon = [lon; MWB.(fields{i}).lon];
-%     lat = [lat; MWB.(fields{i}).lat];
-%     Hs = [Hs; MWB.(fields{i}).Hs];
-% end
-%
-% buoyData.time = time;
-% buoyData.lon  = 360 + lon; %from negative W to E poisitive 0 - 360
-% buoyData.lat  = lat;
-% buoyData.hs   = Hs;
-
-%% ITOP
-%EASI-N
-% load([buoyPath 'EASI_Nv2.mat'])
-% buoyData.time = EN.var.yday + datenum([2010 01 01 00 00 00]);
-% buoyData.lon  =  126.968.*ones(length(buoyData.time),1);
-% buoyData.lat  =  21.238.*ones(length(buoyData.time),1);
-% buoyData.hs   = EN.par.int.Hm0;
-% clear EN
-
-%EASI-S
-% load([buoyPath 'EASI_Sv5.mat'])
-% buoyData.time = ES.var.yday + datenum([2010 01 01 00 00 00]);
-% buoyData.lon  =  127.258.*ones(length(buoyData.time),1);
-% buoyData.lat  =  19.683.*ones(length(buoyData.time),1);
-% buoyData.hs   = ES.par.int.Hm0;
-% clear ES
+title('Hs Test Plot')
+ylabel('Hs [m]')
+datetick('x','mm-YY')
 
 %% load altimeter data
 
 switch options.altDatabase
     case 'RY19'
-        [loadSatList] = defineSatListRY19(buoyData.time,altPath);
+        loadSatList = defineSatListRY19(buoyData.time,altPath);
     case 'ESA'
         loadSatList = defineSatListESA(buoyData.time,altPath);
 end
@@ -202,12 +235,10 @@ if isempty(loadSatList)
         ' to ' num2str(buoyData.time(end))]);
 else
     for i =1:length(loadSatList)
-        disp([loadSatList(i).name ' was active with buoy ' buoyInfo]);
+        disp([loadSatList(i).name ' was active with buoy ' buoyInfo.name]);
     end
     disp('Searching for data...');
 end
-
-
 
 % use model lat - lon to narrow down to files loaded, and load data from
 % local netCDF files
@@ -298,37 +329,34 @@ switch options.altDatabase
         end
 end
 
-
 %% Reducing data by averaging over space and time
-for i=length(maxDistance)
-    % to do: add gaussian weighted average
-    [pData.lon , pData.lat , pData.time , pData.altHsMean , pData.altHsStd ,...
-        pData.altHsNearest , pData.altWindMean , pData.altWindStd ,...
-        pData.altWindNearest , pData.buoyIndNaN] = bubbleMethodBuoy(rawAlt.lon ,...
-        rawAlt.lat , rawAlt.time , rawAlt.hs , rawAlt.wind , buoyData.lon, buoyData.lat...
-        , buoyData.time , maxDistance(i), maxTimeDiff , minNumberObs);
-    
-    pData.altHsNearest = pData.altHsNearest';
-    pData.altWindNearest = pData.altWindNearest';
-    
-    % average altimetered data paired with buoy data
-    pData.buoyHs = buoyData.hs(pData.buoyIndNaN);
-    pData.meta.options = options;
-    pData.meta.paths.buoyPath = buoyInfo;
-    pData.meta.paths.savePath = savePath;
-    pData.meta.paths.codePath = codePath;
-    pData.meta.paths.altPath = altPath;
-    % toc
-    %% Done
-    % The unaveraged altimeter data lives in *obsNA, and the averaged stuff in
-    % alt*, the original buoy data is in the structure buoyData. The paried
-    % stuff is paired*, alt*, buoy*.
-    
-    % E.g., lon, lat, time, wave height are in pairedLon, pairedLat,
-    % pairedTime, buoyHs, altHs
-    
-    %% save the matched pairs
-    if options.save
-        save(savePath,'pData','rawAlt','buoyData')
-    end
+% to do: add gaussian weighted average
+[pData.lon , pData.lat , pData.time , pData.altHsMean , pData.altHsStd ,...
+    pData.altHsNearest , pData.altWindMean , pData.altWindStd ,...
+    pData.altWindNearest , pData.buoyIndNaN] = bubbleMethodBuoy(rawAlt.lon ,...
+    rawAlt.lat , rawAlt.time , rawAlt.hs , rawAlt.wind , buoyData.lon, buoyData.lat...
+    , buoyData.time , maxDistance, maxTimeDiff , minNumberObs);
+
+pData.altHsNearest = pData.altHsNearest';
+pData.altWindNearest = pData.altWindNearest';
+
+% average altimetered data paired with buoy data
+pData.buoyHs = buoyData.hs(pData.buoyIndNaN);
+pData.buoyWindSpeed = buoyData.windSpeed(pData.buoyIndNaN);
+pData.meta.options = options;
+pData.meta.buoyInfo = buoyInfo;
+pData.meta.paths.savePath = savePath;
+pData.meta.paths.codePath = codePath;
+pData.meta.paths.altPath = altPath;
+% toc
+%% Done
+% The unaveraged altimeter data lives in *obsNA, and the averaged stuff in
+% alt*, the original buoy data is in the structure buoyData. The paried
+% stuff is paired*, alt*, buoy*.
+
+% E.g., lon, lat, time, wave height are in pairedLon, pairedLat,
+% pairedTime, buoyHs, altHs
+%% save the matched pairs
+if options.save
+    save(savePath,'pData','rawAlt','buoyData')
 end
