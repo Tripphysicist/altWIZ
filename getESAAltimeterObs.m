@@ -11,6 +11,7 @@ function obs = getESAAltimeterObs(loadSatList, inputTime, altPath, QC)
 %  obs.lon - longitude in degrees
 %  obs.lat - latitude in degrees
 %  obs.time - time (MATLAB datenum)
+%  obs.wind - wind speed
 %  obs.hs - denoised data as detailed in Q&C (2019)
 %  obs.hsEr - uncertainty as estimated in Ash (2012)
 %  obs.hsQC - Quality control of individual altimeter measurements is
@@ -148,6 +149,6 @@ else
         %    obs(i).hsQC = obs(i).hsQC(qcPassInd);
         %    obs(i).satID = obs(i).satID(qcPassInd);
         % WIND
-        % obs(i).wind = obs(i).wind(qcPassInd );
+        obs(i).wind = obs(i).wind(qcPassInd);
     end
 end
